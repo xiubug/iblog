@@ -226,6 +226,6 @@ var obj = { a:1, arr: [1,2] };
 var obj2 = deepCopy(obj);
 ```
 结果如下面的示意图所示：
-![img7.png](javascript-types/img7.png)
+![img7.png](javascript-types/img7.jpg)
 
 需要注意的是，如果对象比较大，层级也比较多，深拷贝会带来性能上的问题。在遇到需要采用深拷贝的场景时，可以考虑有没有其他替代的方案。在实际的应用场景中，也是浅拷贝更为常用。
