@@ -48,6 +48,9 @@ toPrimitive方法的目的就是将输入的参数转化成非对象类型。
 
 **正确输出结果：**false
 
+## [] == {}
+**正确输出结果：**false
+
 ## 其他例子
 ``` js
 null == undefined; // 如果x是null，y是undefined，返回true。
