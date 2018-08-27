@@ -14,9 +14,10 @@ top: 100
 
 当时在各种前端框架或库充斥市场的情况下，出现了大量优秀的框架，比如 Backbone、Angular、Knockout、Ember 这些框架大都采用了 MV* 的理念，把数据与视图分离。而就在这样纷繁复杂的时期，React 诞生于 Facebook 的内部项目，因为该公司对市场上所有 JavaScript MVC 框架，都不满意，就决定自己写一套，用来架设 Instagram 的网站。做出来以后，发现这套东西很好用，就在2013年5月开源了。所谓知其然还要知其所以然，加上 React 真是一天一改，如果现在不看，以后也真的很难看懂了。目前社区有很多 React 的源码剖析文章，趁着最近工作不忙，我打算分享一下 React 源码，并自形成一个系列，欢迎一起交流。在开始之前我们先做以下几点约定：
 
-**第一：**目前分析的版本是 React 的最新版本 16.4.3-alpha.0。
-**第二：**我尽可能站在我自己的角度去剖析，当然我会借鉴社区比较优秀的文章，同时面对大家的拍砖，我无条件接受，也很乐意与大家一起交换意见，努力写好该 React 源码系列。
-**第三：**如果有幸您读到该 React 源码系列，感觉写得还行，还望收藏、分享或打赏。
+**第一：**目前分析的版本是 React 的最新版本 16.4.3-alpha.0；
+**第二：**React web应用是最常见的，也是最易于理解的，所以该源码均围绕 React web应用剖析；
+**第三：**我尽可能站在我自己的角度去剖析，当然我会借鉴社区比较优秀的文章，同时面对大家的拍砖，我无条件接受，也很乐意与大家一起交换意见，努力写好该 React 源码系列；
+**第四：**如果有幸您读到该 React 源码系列，感觉写得还行，还望收藏、分享或打赏。
 
 ## 前置知识
 
@@ -746,7 +747,11 @@ function getBundleOutputPaths(bundleType, filename, packageName) {
 
 #### React 对象
 
-我们在源码构建一节讲到 React 的核心入口文件是`packages/react/index.js`:
+实际项目中，可以看到首先需要使用如下代码：
+``` js
+import React from 'react';
+```
+这句代码做的就是引入了React核心源码模块。而我们在源码构建一节讲到 React 的核心入口文件是`packages/react/index.js`:
 ``` js
 'use strict';
 
@@ -757,9 +762,8 @@ const React = require('./src/React');
 module.exports = React.default ? React.default : React;
 ```
 
-我们在代码中执行`import React from 'react'`时，其实引入的就是从源码这里提供的对象。这里需要说明一点：**这里为什么会导出 `React.default ? React.default : React`？**
-
-首先 Rollup 支持 amd、cjs、es、iife 和 umd 模块打包，我们在`packages/src/react.js`使用 export default 进行默认导出，这里使用 require 进行导入。当我们打包成 cjs 模块，我们都知道 require 是 CommonJS 的模块导入方式，不支持模块的默认导出，导入的结果其实是一个含 default 属性的对象，因此需要使用 React.default 来获取实际的 React 对象。当我们打包成 umd 模块时，其中包含 es，这里由于 babel解析器 的功劳，它令(ES6)import === (CommonJS)require，导入的结果其实是不含 default 属性的对象，因此直接使用 React 来获取实际的 React 对象。
+上述代码中执行`import React from 'react'`时，其实引入的就是这里提供的对象。这里需要说明一点：**这里为什么会导出 `React.default ? React.default : React`？**
+>首先 Rollup 支持 amd、cjs、es、iife 和 umd 模块打包，我们在`packages/src/react.js`使用 export default 进行默认导出，这里使用 require 进行导入。当我们打包成 cjs 模块，我们都知道 require 是 CommonJS 的模块导入方式，不支持模块的默认导出，导入的结果其实是一个含 default 属性的对象，因此需要使用 React.default 来获取实际的 React 对象。当我们打包成 umd 模块时，其中包含 es，这里由于 babel解析器 的功劳，它令(ES6)import === (CommonJS)require，导入的结果其实是不含 default 属性的对象，因此直接使用 React 来获取实际的 React 对象。
 
 在这个入口 JS 的上方我们可以找到 React 的来源：`const React = require('./src/React');`，我们来看一下这块儿的实现，它定义在`packages/react/src/React.js` 中，
 
@@ -831,17 +835,80 @@ if (enableSuspense) {
 
 export default React;
 ```
-这里就是我们 React 对象的庐山真面目，实际上它的内容是一个标准的 JSON 对象，React 对象里面包含什么一目了然，就比如我们常用的 Component、PureComponent等。
+上述就是我们 React 的庐山真面目，实际上它的内容是一个标准的 JSON 对象，这里 React 对象里面包含什么一目了然，比如我们常用的Component、PureComponent等，由此可以看出React核心内容只包括定义组件相关的内容和API。
 
+#### 渲染
+
+React 的定位是一个构建用户界面的JavaScript类库，它使用JavaScript语言开发UI组件，可以使用多种方式渲染这些组件，输出用户界面，很大程度上达到了跨平台的能力：
+> We don’t make assumptions about the rest of your technology stack, so you can develop new features in React without rewriting existing code.
+
+现在的 React 在以下几个方面都发挥着很不错的效果：
+1. React Web应用用户界面开发；
+2. React Native App用户界面开发；
+3. Node.js 服务端渲染；
+
+在这些不同场景，渲染的主体很明显是不一样的，有诸如web应用的DOM渲染，React Native的原生View渲染，服务端字符串渲染等，要做到兼容适应多种不同渲染环境，很显然，React不能局限固定渲染UI的方式。
+
+上一节我们讲到React核心内容只涉及如何定义组件，并不涉及具体的组件渲染（即输出用户界面），这需要引入额外渲染模块，下面以渲染React定义的组件为例：
+**React DOM渲染模块：**React DOM渲染模块：将React组件渲染为DOM，然后可以被浏览器处理呈现给用户，这就是通常在web应用中引入的react-dom模块：
+``` js
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+
+ReactDOM.render(<App />, document.getElementById('root'));
+```
+上述代码中，App是使用React核心模块定义的组件，然后使用react-dom渲染模块提供的render方法将其渲染为DOM输出至页面。
+
+**React Native 渲染：**：将React组件渲染为移动端原生View，在React Native应用中引入react-native模块，它提供相应渲染方法可以渲染React组件：
+``` js
+import { AppRegistry } from 'react-native';
+import App from './src/app.js';
+
+AppRegistry.registerComponent('fuc', () => App);
+```
+上述代码中，App是React根组件，使用react-native渲染器的AppRegistry.registerComponent方法将其渲染为原生View。
+
+**React测试渲染：**将React组件渲染为JSON树，用来完成Jest的快照测试，内容在react-test-renderer模块：
+``` js
+import ReactTestRenderer from 'react-test-renderer'; 
+const renderer = ReactTestRenderer.create(
+  <Link page="https://www.facebook.com/">Facebook</Link>
+); 
+console.log(renderer.toJSON()); 
+// { type: 'a',
+//   props: { href: 'https://www.facebook.com/' },
+//   children: [ 'Facebook' ] }
+
+```
 #### 小结
 
 那么至此，我们应该对 React 是什么有一个直观的认识，它本质上就是一个 JSON 对象，至于 React 能做什么，它是怎么做的，我们会在后面的章节一一剖析它们。
 
 ## 主要概念
 
-### 首次渲染
+### 渲染
+
+
+
+### Hello World
+
+在 React 中我们可以采用十分简洁的语法来声明式的将数据渲染为 DOM：
+``` js
+ReactDOM.render(
+  <h1>Hello, world!</h1>,
+  document.getElementById('root')
+);
+```
+这段代码在页面中渲染了一个 “Hello, world!” 标题。
+
+React核心内容只涉及如何定义组件，并不涉及具体的组件渲染（即输出用户界面），这需要额外引入渲染模块，以渲染React定义的组件：
 
 ## 高级指南
+
+### 插槽(Portals)
+
+Portals 提供了一种很好的方法，将子节点渲染到父组件 DOM 层次结构之外的 DOM 节点。
 
 ## Fiber 架构
 
