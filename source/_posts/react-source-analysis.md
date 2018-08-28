@@ -884,22 +884,73 @@ console.log(renderer.toJSON());
 ```
 #### 小结
 
-那么至此，我们应该对 React 是什么有一个直观的认识，它本质上就是一个 JSON 对象，它核心内容只涉及如何定义组件，并不涉及具体的组件渲染（即输出用户界面），这需要引入额外渲染模块，至于 React 能做什么，它是怎么做的，我们会在后面的章节一一剖析它们。
+那么至此，我们应该对 React 是什么有一个直观的认识，它本质上是含有诸多属性的JavaScript对象，它核心内容只涉及如何定义组件，具体的组件渲染（即输出用户界面），需要引入额外的渲染模块，渲染组件方式由环境决定，定义组件，组件状态管理，生命周期方法管理，组件更新等应该跨平台一致处理，不受渲染环境影响，这部分内容统一由调和器（Reconciler）处理，不同渲染器都会使用该模块。调和器主要作用就是在组件状态变更时，调用组件树各组件的render方法，渲染，卸载组件。至于 React 能做什么，它是怎么做的，我们会在后面的章节一一剖析它们。
 
 ## 主要概念
 
-### Hello World
+### 首次渲染
 
-在 React 中我们可以采用十分简洁的语法来声明式的将数据渲染为 DOM：
+在 Web 项目中，如果要将应用渲染至页面，通常会有如下代码：
+
 ``` js
-ReactDOM.render(
-  <h1>Hello, world!</h1>,
-  document.getElementById('root')
-);
-```
-这段代码在页面中渲染了一个 “Hello, world!” 标题。
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App'; // 应用根组件
 
-React核心内容只涉及如何定义组件，并不涉及具体的组件渲染（即输出用户界面），这需要额外引入渲染模块，以渲染React定义的组件：
+ReactDOM.render(<App />, document.getElementById('root')); // 应用挂载容器DOM
+```
+
+`react-dom`是用于浏览器端渲染React应用的模块，通过`ReactDOM.render(component, mountNode)`对`自定义组件/原生DOM/字符串`进行挂载，[ReactDOM模块](https://github.com/facebook/react/blob/master/packages/react-dom/src/client/ReactDOM.js)源码在`packages/react-dom/src/client/ReactDOM.js`中，有三个类似的方法：
+
+``` js
+const ReactDOM: Object = {
+  // 新API，未来代替render
+  hydrate(element: React$Node, container: DOMContainer, callback: ?Function) {
+    // TODO: throw or warn if we couldn't hydrate?
+    return legacyRenderSubtreeIntoContainer(
+      null,
+      element,
+      container,
+      true,
+      callback,
+    );
+  },
+  render(
+    element: React$Element<any>,  // React元素，通常是项目根组件
+    container: DOMContainer, // React应用挂载的DOM容器
+    callback: ?Function, // 回调函数
+  ) {
+    return legacyRenderSubtreeIntoContainer(
+      null,
+      element,
+      container,
+      false,
+      callback,
+    );
+  },
+  // 将组件挂载到传入的 DOM 节点上（不稳定api）
+  unstable_renderSubtreeIntoContainer(
+    parentComponent: React$Component<any, any>,
+    element: React$Element<any>,
+    containerNode: DOMContainer,
+    callback: ?Function,
+  ) {
+    invariant(
+      parentComponent != null && ReactInstanceMap.has(parentComponent),
+      'parentComponent must be a valid React Component',
+    );
+    return legacyRenderSubtreeIntoContainer(
+      parentComponent,
+      element,
+      containerNode,
+      false,
+      callback,
+    );
+  },
+};
+```
+
+其实`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。从字面意思可以看出它是将"子DOM"插入容器的方法，我们看下`legacyRenderSubtreeIntoContainer`源码实现:
 
 ## 高级指南
 
@@ -907,7 +958,7 @@ React核心内容只涉及如何定义组件，并不涉及具体的组件渲染
 
 Portals 提供了一种很好的方法，将子节点渲染到父组件 DOM 层次结构之外的 DOM 节点。
 
-## Fiber 架构
+## React Fiber
 
 ### 背景
 我们都知道浏览器渲染引擎是单线程的，在 React15.x 及之前版本，从setState开始到渲染完成整个过程是不受控制且连续不中断完成的，由于该过程将会占用整个线程，则其他任务都会被阻塞，如样式计算、界面布局以及许多情况下的绘制等，如果需要渲染的是一个很大、层级很深的组件，这可能就会使用户感觉明显卡顿，比如更新一个组件需要1毫秒，如果有200个组件要更新，那就需要200毫秒，在这200毫秒的更新过程中，浏览器唯一的主线程在专心运行更新操作，无暇去做其他任何事情。想象一下，在这200毫秒内，用户往一个input元素中输入点什么，敲击键盘也不会获得响应，因为渲染输入按键结果也是浏览器主线程的工作，但是浏览器主线程被React占用，抽不出空，最后的结果就是用户敲了按键看不到反应，等React更新过程结束之后，咔咔咔那些按键一下子出现在input元素里了。这个版本的调和器可以称为**栈调和器（Stack Reconciler）**。Stack Reconcilier 的主要缺陷就是**不能暂停渲染任务，也不能切分任务，更无法有效平衡组件更新渲染与动画相关任务间的执行顺序（即不能划分任务优先级），这样就很有可能导致重要任务卡顿，动画掉帧等问题。**
@@ -919,6 +970,1040 @@ Portals 提供了一种很好的方法，将子节点渲染到父组件 DOM 层�
 **三：**可以在父子组件任务间前进后退切换任务，以支持React执行过程中的布局刷新；
 **四：**支持 render 方法返回多个元素；
 **五：**对异常边界处理提供了更好的支持；
+
+### Fiber与JavaScript
+
+### Fiber与组件
+
+我们已经知道了Fiber的功能及其主要特点，那么其如何和组件联系，并且如何实现效果的呢，以下几点可以概括：
+1. React应用中的基础单元是组件，应用以组件树形式组织，渲染组件；
+2. Fiber调和器基础单元则是fiber（调和单元），应用以fiber树形式组织，应用Fiber算法；
+3. 组件树和fiber树结构对应，一个组件实例有一个对应的fiber实例；
+4. Fiber负责整个应用层面的调和，fiber实例负责对应组件的调和；
+
+**注意Fiber与fiber的区别，Fiber是指调和器算法，fiber则是调和器算法组成单元，和组件与应用关系类似，每一个组件实例会有对应的fiber实例负责该组件的调和。**
+
+### Fiber数据结构
+
+截止目前，我们对Fiber应该有了初步的了解，在具体介绍Fiber的实现与架构之前，准备先简单介绍一下Fiber的数据结构，数据结构能一定程度反映其整体工作架构。
+其实，一个fiber就是一个JavaScript对象，以键值对形式存储了一个关联组件的信息，包括组件接收的props，维护的state，最后需要渲染出的内容等。接下来我们将介Fiber对象的主要属性。
+
+#### Fiber对象
+
+[Fiber对象](https://github.com/facebook/react/blob/master/packages/react-reconciler/src/ReactFiber.js)的定义在`packages/react-reconciler/src/ReactFiber.js`中：
+``` js
+// 一个Fiber对象作用于一个组件
+export type Fiber = {|
+  // 标记fiber类型tag
+  tag: TypeOfWork,
+
+  // 唯一标识
+  key: null | string,
+
+  // fiber对应的function/class/module类型组件名.
+  type: any,
+
+  // fiber所在组件树的根组件FiberRoot对象
+  stateNode: any,
+
+  // 处理完当前fiber后返回的fiber，
+  // 返回当前fiber所在fiber树的父级fiber实例
+  return: Fiber | null,
+
+  // fiber树结构相关链接
+  child: Fiber | null,
+  sibling: Fiber | null,
+  index: number,
+
+  // The ref last used to attach this node.
+  // I'll avoid adding an owner field for prod and model that as functions.
+  ref: null | (((handle: mixed) => void) & {_stringRef: ?string}) | RefObject,
+
+  // 当前处理过程中的组件props对象
+  pendingProps: any, // This type will be more specific once we overload the tag.
+  // 缓存的之前组件props对象
+  memoizedProps: any, // The props used to create the output.
+
+  // 组件状态更新及对应回调函数的存储队列
+  updateQueue: UpdateQueue<any> | null,
+
+  // The state used to create the output
+  memoizedState: any,
+
+  // A linked-list of contexts that this fiber depends on
+  firstContextDependency: ContextDependency<mixed> | null,
+
+  // Bitfield that describes properties about the fiber and its subtree. E.g.
+  // the AsyncMode flag indicates whether the subtree should be async-by-
+  // default. When a fiber is created, it inherits the mode of its
+  // parent. Additional flags can be set at creation time, but after that the
+  // value should remain unchanged throughout the fiber's lifetime, particularly
+  // before its child fibers are created.
+  mode: TypeOfMode,
+
+  // Effect
+  effectTag: TypeOfSideEffect,
+
+  // Singly linked list fast path to the next fiber with side-effects.
+  nextEffect: Fiber | null,
+
+  // The first and last fiber with side-effect within this subtree. This allows
+  // us to reuse a slice of the linked list when we reuse the work done within
+  // this fiber.
+  firstEffect: Fiber | null,
+  lastEffect: Fiber | null,
+
+  // 更新任务的最晚执行时间
+  expirationTime: ExpirationTime,
+
+  // This is used to quickly determine if a subtree has no pending changes.
+  childExpirationTime: ExpirationTime,
+
+  // fiber的版本池，即记录fiber更新过程，便于恢复
+  alternate: Fiber | null,
+
+  // Conceptual aliases  
+  // workInProgress : Fiber ->  alternate The alternate used for reuse happens  
+  // to be the same as work in progress.
+
+  // Time spent rendering this Fiber and its descendants for the current update.
+  // This tells us how well the tree makes use of sCU for memoization.
+  // It is reset to 0 each time we render and only updated when we don't bailout.
+  // This field is only set when the enableProfilerTimer flag is enabled.
+  actualDuration?: number,
+
+  // If the Fiber is currently active in the "render" phase,
+  // This marks the time at which the work began.
+  // This field is only set when the enableProfilerTimer flag is enabled.
+  actualStartTime?: number,
+
+  // Duration of the most recent render time for this Fiber.
+  // This value is not updated when we bailout for memoization purposes.
+  // This field is only set when the enableProfilerTimer flag is enabled.
+  selfBaseDuration?: number,
+
+  // Sum of base times for all descedents of this Fiber.
+  // This value bubbles up during the "complete" phase.
+  // This field is only set when the enableProfilerTimer flag is enabled.
+  treeBaseDuration?: number,
+
+  // Conceptual aliases
+  // workInProgress : Fiber ->  alternate The alternate used for reuse happens
+  // to be the same as work in progress.
+  // __DEV__ only
+  _debugID?: number,
+  _debugSource?: Source | null,
+  _debugOwner?: Fiber | null,
+  _debugIsCurrentlyTiming?: boolean,
+|};
+```
+1. type & key：同React元素的值；
+2. type：描述fiber对应的React组件；
+  1. 对于组合组件：值为function或class组件本身；
+  2. 对于原生组件（div等）：值为该元素类型字符串；
+3. key：调和阶段，标识fiber，以检测是否可重用该fiber实例；
+4. child & sibling：组件树，对应生成fiber树，类比的关系；
+5. pendingProps & memoizedProps：分别表示组件当前传入的及之前的props；
+6. return：返回当前fiber所在fiber树的父级fiber实例，即当前组件的父组件对应的fiber；
+7. alternate：fiber的版本池，即记录fiber更新过程，便于恢复重用；
+8. workInProgress：正在处理的fiber，概念上叫法，实际上没有此属性；
+
+##### alternate fiber
+可以理解为一个fiber版本池，用于交替记录组件更新（切分任务后变成多阶段更新）过程中fiber的更新，因为在组件更新的各阶段，更新前及更新过程中fiber状态并不一致，在需要恢复时（如，发生冲突），即可使用另一者直接回退至上一版本fiber。
+>1. 使用alternate属性双向连接一个当前fiber和其work-in-progress，当前fiber实例的alternate属性指向其work-in-progress，work-in-progress的alternate属性指向当前稳定fiber；
+2. 当前fiber的替换版本是其work-in-progress，work-in-progress的交替版本是当前fiber；
+3. 当work-in-progress更新一次后，将同步至当前fiber，然后继续处理，同步直至任务完成；
+4. work-in-progress指向处理过程中的fiber，而当前fiber总是维护处理完成的最新版本的fiber。
+
+##### 创建Fiber实例
+
+创建fiber实例即返回一个带有上一小节描述的诸多属性的JavaScript对象，FiberNode即根据传入的参数构造返回一个初始化的对象：
+``` js
+const createFiber = function(
+  tag: TypeOfWork,
+  pendingProps: mixed,
+  key: null | string,
+  mode: TypeOfMode,
+): Fiber {
+  // $FlowFixMe: the shapes are exact here but Flow doesn't like constructors
+  return new FiberNode(tag, pendingProps, key, mode);
+};
+```
+
+创建alternate fiber以处理任务的实现如下：
+``` js
+// 创建一个alternate fiber处理任务
+export function createWorkInProgress(
+  current: Fiber,
+  pendingProps: any,
+  expirationTime: ExpirationTime,
+): Fiber {
+  let workInProgress = current.alternate;
+  if (workInProgress === null) {
+    // We use a double buffering pooling technique because we know that we'll
+    // only ever need at most two versions of a tree. We pool the "other" unused
+    // node that we're free to reuse. This is lazily created to avoid allocating
+    // extra objects for things that are never updated. It also allow us to
+    // reclaim the extra memory if needed.
+    workInProgress = createFiber(
+      current.tag,
+      pendingProps,
+      current.key,
+      current.mode,
+    );
+    workInProgress.type = current.type;
+    workInProgress.stateNode = current.stateNode;
+
+    if (__DEV__) {
+      // DEV-only fields
+      workInProgress._debugID = current._debugID;
+      workInProgress._debugSource = current._debugSource;
+      workInProgress._debugOwner = current._debugOwner;
+    }
+
+    workInProgress.alternate = current;
+    current.alternate = workInProgress;
+  } else {
+    workInProgress.pendingProps = pendingProps;
+
+    // We already have an alternate.
+    // Reset the effect tag.
+    workInProgress.effectTag = NoEffect;
+
+    // The effect list is no longer valid.
+    workInProgress.nextEffect = null;
+    workInProgress.firstEffect = null;
+    workInProgress.lastEffect = null;
+
+    if (enableProfilerTimer) {
+      // We intentionally reset, rather than copy, actualDuration & actualStartTime.
+      // This prevents time from endlessly accumulating in new commits.
+      // This has the downside of resetting values for different priority renders,
+      // But works for yielding (the common case) and should support resuming.
+      workInProgress.actualDuration = 0;
+      workInProgress.actualStartTime = -1;
+    }
+  }
+
+  // Don't touching the subtree's expiration time, which has not changed.
+  workInProgress.childExpirationTime = current.childExpirationTime;
+  if (pendingProps !== current.pendingProps) {
+    // This fiber has new props.
+    workInProgress.expirationTime = expirationTime;
+  } else {
+    // This fiber's props have not changed.
+    workInProgress.expirationTime = current.expirationTime;
+  }
+
+  workInProgress.child = current.child;
+  workInProgress.memoizedProps = current.memoizedProps;
+  workInProgress.memoizedState = current.memoizedState;
+  workInProgress.updateQueue = current.updateQueue;
+  workInProgress.firstContextDependency = current.firstContextDependency;
+
+  // These will be overridden during the parent's reconciliation
+  workInProgress.sibling = current.sibling;
+  workInProgress.index = current.index;
+  workInProgress.ref = current.ref;
+
+  if (enableProfilerTimer) {
+    workInProgress.selfBaseDuration = current.selfBaseDuration;
+    workInProgress.treeBaseDuration = current.treeBaseDuration;
+  }
+
+  return workInProgress;
+}
+```
+
+#### Fiber类型
+上一小节，Fiber对象中有个tag属性，标记fiber类型，而fiber实例是和组件对应的，所以其类型基本上对应于组件类型，在`packages/shared/ReactWorkTags.js`中：
+``` js
+export type TypeOfWork = | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+
+export const FunctionalComponent = 0; // 函数式组件
+export const FunctionalComponentLazy = 1;
+export const ClassComponent = 2; // Class类组件
+export const ClassComponentLazy = 3;
+export const IndeterminateComponent = 4; // Before we know whether it is functional or class
+export const HostRoot = 5; // 组件树根组件，可以嵌套
+export const HostPortal = 6; // 子树。可以是一个入口点不同的渲染器。
+export const HostComponent = 7; // 标准组件，如地div， span等
+export const HostText = 8; // 文本
+export const Fragment = 9;  // 片段
+export const Mode = 10;
+export const ContextConsumer = 11;
+export const ContextProvider = 12;
+export const ForwardRef = 13;
+export const ForwardRefLazy = 14;
+export const Profiler = 15;
+export const PlaceholderComponent = 16; // placeholder（占位符）
+```
+在调度执行任务的时候会根据不同类型fiber，即fiber.tag值进行不同处理。
+
+#### FiberRoot对象
+
+FiberRoot对象，主要用来管理组件树组件的更新进程，同时记录组件树挂载的DOM容器相关信息，在`packages/react-reconciler/src/ReactFiberRoot.js`中：
+``` js
+export type FiberRoot = {
+  // fiber节点的容器元素相关信息，通常会直接传入容器元素
+  containerInfo: any,
+  // Used only by persistent updates.
+  pendingChildren: any,
+  // 当前fiber树中激活状态（正在处理）的fiber节点，
+  current: Fiber,
+
+  // The following priority levels are used to distinguish between 1)
+  // uncommitted work, 2) uncommitted work that is suspended, and 3) uncommitted
+  // work that may be unsuspended. We choose not to track each individual
+  // pending level, trading granularity for performance.
+  //
+  // The earliest and latest priority levels that are suspended from committing.
+  earliestSuspendedTime: ExpirationTime,
+  latestSuspendedTime: ExpirationTime,
+  // The earliest and latest priority levels that are not known to be suspended.
+  earliestPendingTime: ExpirationTime,
+  latestPendingTime: ExpirationTime,
+  // The latest priority level that was pinged by a resolved promise and can
+  // be retried.
+  latestPingedTime: ExpirationTime,
+
+  // If an error is thrown, and there are no more updates in the queue, we try
+  // rendering from the root one more time, synchronously, before handling
+  // the error.
+  didError: boolean,
+
+  pendingCommitExpirationTime: ExpirationTime,
+  // 准备好提交的已处理完成的work-in-progress
+  finishedWork: Fiber | null,
+  // Timeout handle returned by setTimeout. Used to cancel a pending timeout, if
+  // it's superseded by a new one.
+  timeoutHandle: TimeoutHandle | NoTimeout,
+  // Top context object, used by renderSubtreeIntoContainer
+  context: Object | null,
+  pendingContext: Object | null,
+  // Determines if we should attempt to hydrate on the initial mount
+  +hydrate: boolean,
+  // Remaining expiration time on this root.
+  // TODO: Lift this into the renderer
+  nextExpirationTimeToWorkOn: ExpirationTime,
+  expirationTime: ExpirationTime,
+  // List of top-level batches. This list indicates whether a commit should be
+  // deferred. Also contains completion callbacks.
+  // TODO: Lift this into the renderer
+  firstBatch: Batch | null,
+  // 多组件树FirberRoot对象以单链表存储链接，指向下一个需要调度的FiberRoot
+  nextScheduledRoot: FiberRoot | null,
+};
+```
+
+##### 创建FiberRoot实例
+
+``` js
+import {
+  ClassComponent,
+  HostRoot,
+  Mode,
+} from 'shared/ReactTypeOfWork';
+// 创建返回一个初始根组件对应的fiber实例
+export function createHostRootFiber(isAsync: boolean): Fiber {
+  let mode = isAsync ? AsyncMode | StrictMode : NoContext;
+
+  if (enableProfilerTimer && isDevToolsPresent) {
+    // Always collect profile timings when DevTools are present.
+    // This enables DevTools to start capturing timing at any point–
+    // Without some nodes in the tree having empty base times.
+    mode |= ProfileMode;
+  }
+  // 创建fiber
+  return createFiber(HostRoot, null, null, mode);
+}
+
+export function createFiberRoot(
+  containerInfo: any,
+  isAsync: boolean,
+  hydrate: boolean,
+): FiberRoot {
+  // 创建初始根组件对应的fiber实例
+  const uninitializedFiber = createHostRootFiber(isAsync);
+  // 组件树根组件的FiberRoot对象
+  const root = {
+    // 根组件对应的fiber实例
+    current: uninitializedFiber,
+    containerInfo: containerInfo,
+    pendingChildren: null,
+
+    earliestPendingTime: NoWork,
+    latestPendingTime: NoWork,
+    earliestSuspendedTime: NoWork,
+    latestSuspendedTime: NoWork,
+    latestPingedTime: NoWork,
+
+    didError: false,
+
+    pendingCommitExpirationTime: NoWork,
+    finishedWork: null,
+    timeoutHandle: noTimeout,
+    context: null,
+    pendingContext: null,
+    hydrate,
+    nextExpirationTimeToWorkOn: NoWork,
+    expirationTime: NoWork,
+    firstBatch: null,
+    nextScheduledRoot: null,
+  };
+  // 组件树根组件fiber实例的stateNode指向FiberRoot对象
+  uninitializedFiber.stateNode = root;
+  return root;
+}
+```
+
+#### ReactChildFiber
+
+在生成组件树的FiberRoot对象后，会为子组件生成各自的fiber实例，这一部分由[ReactChildFiber模块]()实现，在`packages/react-reconciler/src/ReactChildFiber.js`中：
+
+``` js
+// 调和（处理更新）子fibers
+export const reconcileChildFibers = ChildReconciler(true);
+// 挂载（初始化）子fibers
+export const mountChildFibers = ChildReconciler(false);
+```
+而ChildReconciler方法所做的则是根据传入参数判断是调用初始化子组件fibers逻辑还是执行调和已有子组件fibers逻辑。
+
+ChildReconciler方法，返回reconcileChildFibers方法：
+1. 判断子级传递内容的数据类型，执行不同的处理，这也对应着我们写React组件时传递props.children时，其类型可以是对象或数组，字符串，是数字等；
+2. 然后具体根据子组件类型，调用不同的具体调和处理函数；
+3. 最后返回根据子组件创建或更新得到的fiber实例；
+
+``` js
+function reconcileChildFibers(
+    returnFiber: Fiber,
+    currentFirstChild: Fiber | null,
+    newChild: any,
+    expirationTime: ExpirationTime,
+  ): Fiber | null {
+    // This function is not recursive.
+    // If the top level item is an array, we treat it as a set of children,
+    // not as a fragment. Nested arrays on the other hand will be treated as
+    // fragment nodes. Recursion happens at the normal flow.
+
+    // Handle top level unkeyed fragments as if they were arrays.
+    // This leads to an ambiguity between <>{[...]}</> and <>...</>.
+    // We treat the ambiguous cases above the same.
+    const isUnkeyedTopLevelFragment =
+      typeof newChild === 'object' &&
+      newChild !== null &&
+      newChild.type === REACT_FRAGMENT_TYPE &&
+      newChild.key === null;
+    if (isUnkeyedTopLevelFragment) {
+      newChild = newChild.props.children;
+    }
+
+    // Handle object types
+    const isObject = typeof newChild === 'object' && newChild !== null;
+
+    if (isObject) {
+      // 子组件实例类型，以Symbol符号表示的
+      switch (newChild.$$typeof) {
+        case REACT_ELEMENT_TYPE:
+          return placeSingleChild(
+            reconcileSingleElement(
+              returnFiber,
+              currentFirstChild,
+              newChild,
+              expirationTime,
+            ),
+          );
+         // React组件调用
+        case REACT_PORTAL_TYPE:
+          return placeSingleChild(
+            reconcileSinglePortal(
+              returnFiber,
+              currentFirstChild,
+              newChild,
+              expirationTime,
+            ),
+          );
+      }
+    }
+
+    if (typeof newChild === 'string' || typeof newChild === 'number') {
+      return placeSingleChild(
+        reconcileSingleTextNode(
+          returnFiber,
+          currentFirstChild,
+          '' + newChild,
+          expirationTime,
+        ),
+      );
+    }
+
+    if (isArray(newChild)) {
+      return reconcileChildrenArray(
+        returnFiber,
+        currentFirstChild,
+        newChild,
+        expirationTime,
+      );
+    }
+
+    if (getIteratorFn(newChild)) {
+      return reconcileChildrenIterator(
+        returnFiber,
+        currentFirstChild,
+        newChild,
+        expirationTime,
+      );
+    }
+
+    if (isObject) {
+      throwOnInvalidObjectType(returnFiber, newChild);
+    }
+
+    if (__DEV__) {
+      if (typeof newChild === 'function') {
+        warnOnFunctionType();
+      }
+    }
+    if (typeof newChild === 'undefined' && !isUnkeyedTopLevelFragment) {
+      // If the new child is undefined, and the return fiber is a composite
+      // component, throw an error. If Fiber return types are disabled,
+      // we already threw above.
+      switch (returnFiber.tag) {
+        case ClassComponent:
+        case ClassComponentLazy: {
+          if (__DEV__) {
+            const instance = returnFiber.stateNode;
+            if (instance.render._isMockFunction) {
+              // We allow auto-mocks to proceed as if they're returning null.
+              break;
+            }
+          }
+        }
+        // Intentionally fall through to the next case, which handles both
+        // functions and classes
+        // eslint-disable-next-lined no-fallthrough
+        case FunctionalComponent: {
+          const Component = returnFiber.type;
+          invariant(
+            false,
+            '%s(...): Nothing was returned from render. This usually means a ' +
+              'return statement is missing. Or, to render nothing, ' +
+              'return null.',
+            Component.displayName || Component.name || 'Component',
+          );
+        }
+      }
+    }
+
+    // Remaining cases are all treated as empty.
+    return deleteRemainingChildren(returnFiber, currentFirstChild);
+  }
+
+  return reconcileChildFibers;
+}
+```
+
+### Fiber架构
+
+在学习Fiber的时候，我尝试去阅读源码，发现通过这种方式很难快速理解，学习Fiber，而先了解调和器是干什么的及调和器在React中的存在形式，然后再学习Fiber的结构及算法实现思路，明白从组件被定义到渲染至页面它需要做什么，这也是本篇文章的组织形式。
+
+#### 优先级（ExpirationTime VS PriorityLevel）
+
+我们已经知道Fiber可以切分任务并设置不同优先级，那么是如何实现划分优先级的呢，其表现形式什么呢？
+
+##### ExpirationTime
+
+Fiber切分任务并调用requestIdleCallback和requestAnimationFrameAPI，保证渲染任务和其他任务，在不影响应用交互，不掉帧的前提下，稳定执行，而实现调度的方式正是给每一个fiber实例设置到期执行时间，不同时间即代表不同优先级，到期时间越短，则代表优先级越高，需要尽早执行。
+> 所谓的到期时间（ExpirationTime），是相对于调度器初始调用的起始时间而言的一个时间段；调度器初始调用后的某一段时间内，需要调度完成这项更新，这个时间段长度值就是到期时间值。
+
+Fiber提供[ReactFiberExpirationTime模块](https://github.com/facebook/react/blob/master/packages/react-reconciler/src/ReactFiberExpirationTime.js)实现到期时间的定义，在`packages/react-reconciler/src/ReactFiberExpirationTime.js`中：
+``` js
+export const NoWork = 0; // 没有任务等待处理
+export const Sync = 1; // 同步模式，立即处理任务
+export const Never = MAX_SIGNED_31_BIT_INT; // 1073741823 Max 31: Math.pow(2, 30) - 1 
+
+const UNIT_SIZE = 10; // 过期时间单元（ms）
+const MAGIC_NUMBER_OFFSET = 2; // 到期时间偏移量
+
+// 以ExpirationTime特定单位（1单位=10ms）表示的到期执行时间
+export function msToExpirationTime(ms: number): ExpirationTime {
+  // 总是增加一个偏移量，在ms<10时与Nowork模式进行区别
+  return ((ms / UNIT_SIZE) | 0) + MAGIC_NUMBER_OFFSET;
+}
+
+// 以毫秒表示的到期执行时间
+export function expirationTimeToMs(expirationTime: ExpirationTime): number {
+  return (expirationTime - MAGIC_NUMBER_OFFSET) * UNIT_SIZE;
+}
+
+// 向上取整（整数单位到期执行时间）
+// precision范围精度：弥补任务执行时间误差
+function ceiling(num: number, precision: number): number {
+  return (((num / precision) | 0) + 1) * precision;
+}
+
+// 计算处理误差时间在内的到期时间
+function computeExpirationBucket(
+  currentTime,
+  expirationInMs,
+  bucketSizeMs,
+): ExpirationTime {
+  return (
+    MAGIC_NUMBER_OFFSET +
+    ceiling(
+      currentTime - MAGIC_NUMBER_OFFSET + expirationInMs / UNIT_SIZE,
+      bucketSizeMs / UNIT_SIZE,
+    )
+  );
+}
+
+export const LOW_PRIORITY_EXPIRATION = 5000;
+export const LOW_PRIORITY_BATCH_SIZE = 250;
+
+export function computeAsyncExpiration(
+  currentTime: ExpirationTime,
+): ExpirationTime {
+  return computeExpirationBucket(
+    currentTime,
+    LOW_PRIORITY_EXPIRATION,
+    LOW_PRIORITY_BATCH_SIZE,
+  );
+}
+
+// We intentionally set a higher expiration time for interactive updates in
+// dev than in production.
+//
+// If the main thread is being blocked so long that you hit the expiration,
+// it's a problem that could be solved with better scheduling.
+//
+// People will be more likely to notice this and fix it with the long
+// expiration time in development.
+//
+// In production we opt for better UX at the risk of masking scheduling
+// problems, by expiring fast.
+export const HIGH_PRIORITY_EXPIRATION = __DEV__ ? 500 : 150;
+export const HIGH_PRIORITY_BATCH_SIZE = 100;
+
+export function computeInteractiveExpiration(currentTime: ExpirationTime) {
+  return computeExpirationBucket(
+    currentTime,
+    HIGH_PRIORITY_EXPIRATION,
+    HIGH_PRIORITY_BATCH_SIZE,
+  );
+}
+
+```
+
+该模块提供的功能主要有：
+1. Sync：同步模式，在UI线程立即执行此类任务，如动画反馈等；
+2. 异步模式：
+  1. 转换：到期时间特定单位和时间单位（ms）的相互转换；
+  2. 计算：计算包含允许误差在内的到期时间；
+
+##### PriorityLevel
+
+其实在15.x版本中出现了对于任务的优先层级划分，[ReactPriorityLevel模块](https://github.com/facebook/react/blob/15.6-dev/src/renderers/shared/fiber/ReactPriorityLevel.js)，在`/src/renderers/shared/fiber/ReactPriorityLevel.js`中：
+```js
+export type PriorityLevel = 0 | 1 | 2 | 3 | 4 | 5;
+
+module.exports = {
+  NoWork: 0, // No work is pending.
+  SynchronousPriority: 1, // For controlled text inputs. Synchronous side-effects.
+  AnimationPriority: 2, // Needs to complete before the next frame.
+  HighPriority: 3, // Interaction that needs to complete pretty soon to feel responsive.
+  LowPriority: 4, // Data fetching, or result from updating stores.
+  OffscreenPriority: 5, // Won't be visible but do the work in case it becomes visible.
+};
+```
+相对于PriorityLevel的简单层级划分，在16.x版本中使用的则是ExpirationTime的到期时间方式表示任务的优先级，可以更好的对任务进行切分，调度。
+
+#### 调度器（Scheduler）
+前面介绍调和器主要作用就是在组件状态变更时，调用组件树各组件的render方法，渲染，卸载组件，而Fiber使得应用可以更好的协调不同任务的执行，调和器内关于高效协调的实现，我们可以称它为调度器（Scheduler）。
+>顾名思义，调度器即调度资源以执行指定任务，React应用中应用组件的更新与渲染，需要占用系统CPU资源，如果不能很好的进行资源平衡，合理调度，优化任务执行策略，那很容易造成CPU这一紧缺资源的消耗和浪费，容易造成页面卡顿，动画掉帧，组件更新异常等诸多问题，就像城市交通调度一样，如果不能有效调度，交通状况很可能将拥堵不堪。
+
+在React 15.x版本中，组件的状态变更将直接导致其子组件树的重新渲染，新版本Fiber算法将在调度器方面进行全面改进，主要的关注点是：
+1. 合并多次更新：没有必要在组件的每一个状态变更时都立即触发更新任务，有些中间状态变更其实是对更新任务所耗费资源的浪费，就比如用户发现错误点击时快速操作导致组件某状态从A至B再至C，这中间的B状态变更其实对于用户而言并没有意义，那么我们可以直接合并状态变更，直接从A至C只触发一次更新；
+2. 任务优先级：不同类型的更新有不同优先级，例如用户操作引起的交互动画可能需要有更好的体验，其优先级应该比完成数据更新高；
+3. 推拉式调度：基于推送的调度方式更多的需要开发者编码间接决定如何调度任务，而拉取式调度更方便React框架层直接进行全局自主调度；
+
+[源码](https://github.com/facebook/react/blob/master/packages/react-reconciler/src/ReactFiberScheduler.js)在`packages/react-reconciler/src/ReactFiberScheduler.js`中：
+
+``` js
+export {
+  requestCurrentTime,
+  computeExpirationForFiber,
+  captureCommitPhaseError,
+  onUncaughtError,
+  renderDidSuspend,
+  renderDidError,
+  retrySuspendedRoot,
+  markLegacyErrorBoundaryAsFailed,
+  isAlreadyFailedLegacyErrorBoundary,
+  scheduleWork,
+  requestWork,
+  flushRoot,
+  batchedUpdates,
+  unbatchedUpdates,
+  flushSync,
+  flushControlled,
+  deferredUpdates,
+  syncUpdates,
+  interactiveUpdates,
+  flushInteractiveUpdates,
+  computeUniqueAsyncExpiration,
+};
+```
+如上调度器主要输出API为实现调度任务，拉取更新，延迟更新等功能。
+
+##### 调度器与优先级
+
+调度器如何切分任务划分优先级的呢？在React调和算法中，任务由fiber实例描述，所以要划分任务优先级，等效于设置fiber的到期时间（expirationTime），调度器内提供了computeExpirationForFiber方法以计算某一个fiber的到期时间，[源码](https://github.com/facebook/react/blob/master/packages/react-reconciler/src/ReactFiberScheduler.js)在`packages/react-reconciler/src/ReactFiberScheduler.js`中：
+
+``` js
+import {
+  NoWork,
+  Sync,
+  Never,
+  msToExpirationTime,
+  expirationTimeToMs,
+  computeAsyncExpiration,
+  computeInteractiveExpiration,
+} from './ReactFiberExpirationTime';
+
+function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
+  let expirationTime;
+  if (expirationContext !== NoWork) {
+    // An explicit expiration context was set;
+    expirationTime = expirationContext;
+  } else if (isWorking) {
+    if (isCommitting) {
+      // 在提交阶段的更新任务 需要明确设置同步优先级（Sync Priority）
+      expirationTime = Sync;
+    } else {
+      // 在渲染阶段发生的更新任务
+      // 需要设置为下一次渲染时间的到期时间优先级
+      expirationTime = nextRenderExpirationTime;
+    }
+  } else {
+    // No explicit expiration context was set, and we're not currently
+    // performing work. Calculate a new expiration time.
+    if (fiber.mode & AsyncMode) {
+      if (isBatchingInteractiveUpdates) {
+        // This is an interactive update
+        expirationTime = computeInteractiveExpiration(currentTime);
+      } else {
+        // This is an async update
+        expirationTime = computeAsyncExpiration(currentTime);
+      }
+      // If we're in the middle of rendering a tree, do not update at the same
+      // expiration time that is already rendering.
+      if (nextRoot !== null && expirationTime === nextRenderExpirationTime) {
+        expirationTime += 1;
+      }
+    } else {
+      // 同步更新，设置为同步标记
+      expirationTime = Sync;
+    }
+  }
+  if (isBatchingInteractiveUpdates) {
+    // This is an interactive update. Keep track of the lowest pending
+    // interactive expiration time. This allows us to synchronously flush
+    // all interactive updates when needed.
+    if (
+      lowestPendingInteractiveExpirationTime === NoWork ||
+      expirationTime > lowestPendingInteractiveExpirationTime
+    ) {
+      lowestPendingInteractiveExpirationTime = expirationTime;
+    }
+  }
+  return expirationTime;
+}
+```
+1. 若当前处于任务提交阶段（更新提交至DOM渲染）时，设置当前fiber到期时间为Sync，即同步执行模式；
+2. 若处于DOM渲染阶段时，则需要延迟此fiber任务，将fiber到期时间设置为下一次DOM渲染到期时间；
+3. 若不在任务执行阶段，则需重新设置fiber到期时间：
+  1. 若明确设置useSyncScheduling且fiber.internalContextTag值不等于AsyncUpdates，则表明是同步模式，设置为Sync；
+  2. 否则，调用computeAsyncExpiration方法重新计算此fiber的到期时间；
+
+``` js
+// 重新计算当前时间（ExpirationTime单位表示）
+function recalculateCurrentTime() {  
+  const ms = now() - startTime;  
+  // ExpirationTime单位表示的当前时间  
+  // 时间段值为 now() - startTime（起始时间）  
+  mostRecentCurrentTime = msToExpirationTime(ms);  
+  return mostRecentCurrentTime;
+} 
+
+// 计算异步任务的到期时间
+function computeAsyncExpiration() {  
+  // 计算得到ExpirationTime单位的当前时间  
+  // 聚合相似的更新在一起  
+  // 更新应该在 ~1000ms，最多1200ms内完成  
+  const currentTime = recalculateCurrentTime();  
+  // 对于每个fiber的期望到期时间的增值，最大值为1000ms 
+  const expirationMs = 1000;  
+  // 到期时间的可接受误差时间，200ms 
+  const bucketSizeMs = 200;  
+  // 返回包含误差时间在内的到期时间  
+  return computeExpirationBucket(currentTime, expirationMs, bucketSizeMs);
+}
+
+```
+对于每一个fiber我们期望的到期时间参数是1000ms，另外由于任务执行时间误差，接受200ms误差，最后计算得到的到期时间默认返回值为ExpirationTime单位。
+
+##### 任务调度
+
+上一节介绍了调度器主要提供computeExpirationForFiber等方法支持计算任务优先级（到期时间），接下来介绍调度器如何调度任务。
+> React应用更新时，Fiber从当前处理节点，层层遍历至组件树根组件，然后开始处理更新，调用前面的requestIdleCallback等API执行更新处理。
+
+主要调度逻辑实现在scheduleWork：
+
+1. 通过fiber.return属性，从当前fiber实例层层遍历至组件树根组件；
+2. 依次对每一个fiber实例进行到期时间判断，若大于传入的期望任务到期时间参数，则将其更新为传入的任务到期时间；
+3. 调用requestWork方法开始处理任务，并传入获取的组件树根组件FiberRoot对象和任务到期时间；
+
+``` js
+
+```
+
+### 渲染与调和
+
+在调和阶段，不涉及任何DOM处理，在处理完更新后，需要渲染模块将更新渲染至DOM，这也是React应用中虚拟DOM（Virtual DOM）的概念，即所有的更新计算都基于虚拟DOM，计算完后才将优化后的更新渲染至真实DOM。Fiber使用requestIdleCallbackAPI更高效的执行渲染更新的任务，实现任务的切分。
+
+#### 源码简单分析
+
+本小节针对React渲染模块及调和算法模块代码层关系做简要探讨。
+
+##### react-dom渲染模块
+
+
+
+常用的渲染组件至DOM的render方法如上，调用legacyRenderSubtreeIntoContainer方法，渲染组件的子组件树：
+
+``` js
+// 渲染组件的子组件树至父容器
+function legacyRenderSubtreeIntoContainer(
+  parentComponent: ?React$Component<any, any>,
+  children: ReactNodeList,
+  container: DOMContainer,
+  forceHydrate: boolean,
+  callback: ?Function,
+) {
+  // TODO: Ensure all entry points contain this check
+  invariant(
+    isValidContainer(container),
+    'Target container is not a DOM element.',
+  );
+
+  if (__DEV__) {
+    topLevelUpdateWarnings(container);
+  }
+
+  // TODO: Without `any` type, Flow says "Property cannot be accessed on any
+  // member of intersection type." Whyyyyyy.
+  let root: Root = (container._reactRootContainer: any);
+  if (!root) {
+    // 初次渲染时初始化
+    // 创建react根容器
+    // 缓存react根容器至DOM容器的reactRootContainer属性
+    root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
+      container,
+      forceHydrate,
+    );
+    if (typeof callback === 'function') {
+      const originalCallback = callback;
+      callback = function() {
+        const instance = DOMRenderer.getPublicRootInstance(root._internalRoot);
+        originalCallback.call(instance);
+      };
+    }
+    // 初始化容器相关
+    // 初始安装不应分批进行。
+    DOMRenderer.unbatchedUpdates(() => {
+      if (parentComponent != null) {
+        root.legacy_renderSubtreeIntoContainer(
+          parentComponent,
+          children,
+          callback,
+        );
+      } else {
+        root.render(children, callback);
+      }
+    });
+  } else {
+    if (typeof callback === 'function') {
+      const originalCallback = callback;
+      callback = function() {
+        const instance = DOMRenderer.getPublicRootInstance(root._internalRoot);
+        originalCallback.call(instance);
+      };
+    }
+
+    // 如果不是初次渲染则直接更新容器
+    if (parentComponent != null) {
+      root.legacy_renderSubtreeIntoContainer(
+        parentComponent,
+        children,
+        callback,
+      );
+    } else {
+      root.render(children, callback);
+    }
+  }
+  // 返回根容器fiber树的根fiber实例
+  return DOMRenderer.getPublicRootInstance(root._internalRoot);
+}
+
+```
+
+##### DOM渲染器对象
+
+DOMRenderer是调用调和算法返回的DOM渲染器对象，在此处会传入渲染模块的渲染UI操作API，如：
+
+##### 调和算法入口
+
+[调和算法](https://github.com/facebook/react/blob/master/packages/react-reconciler/src/ReactFiberReconciler.js)入口：
+
+``` js
+// 生成调度器API
+import {
+  computeUniqueAsyncExpiration,
+  requestCurrentTime,
+  computeExpirationForFiber,
+  scheduleWork,
+  requestWork,
+  flushRoot,
+  batchedUpdates,
+  unbatchedUpdates,
+  flushSync,
+  flushControlled,
+  deferredUpdates,
+  syncUpdates,
+  interactiveUpdates,
+  flushInteractiveUpdates,
+} from './ReactFiberScheduler';
+
+// 创建容器
+export function createContainer(
+  containerInfo: Container,
+  isAsync: boolean,
+  hydrate: boolean,
+): OpaqueRoot {
+  // 创建根fiber实例
+  return createFiberRoot(containerInfo, isAsync, hydrate);
+}
+
+// 更新容器内容
+export function updateContainer(
+  element: ReactNodeList,
+  container: OpaqueRoot,
+  parentComponent: ?React$Component<any, any>,
+  callback: ?Function,
+): ExpirationTime {
+  const current = container.current;
+  const currentTime = requestCurrentTime();
+  const expirationTime = computeExpirationForFiber(currentTime, current);
+  return updateContainerAtExpirationTime(
+    element,
+    container,
+    parentComponent,
+    expirationTime,
+    callback,
+  );
+}
+
+// 获取容器fiber树的根fiber实例
+export function getPublicRootInstance(
+  container: OpaqueRoot,
+): React$Component<any, any> | PublicInstance | null {
+  const containerFiber = container.current;
+  if (!containerFiber.child) {
+    return null;
+  }
+  switch (containerFiber.child.tag) {
+    case HostComponent:
+      return getPublicInstance(containerFiber.child.stateNode);
+    default:
+      return containerFiber.child.stateNode;
+  }
+}
+
+```
+
+在react-dom渲染模块调用createContainer创建容器和根fiber实例，FiberRoot对象，调用updateContainer方法更新容器内容。
+
+**开始更新**
+
+``` js
+// 更新
+function scheduleRootUpdate(
+  current: Fiber,
+  element: ReactNodeList,
+  expirationTime: ExpirationTime,
+  callback: ?Function,
+) {
+  if (__DEV__) {
+    if (
+      ReactCurrentFiber.phase === 'render' &&
+      ReactCurrentFiber.current !== null &&
+      !didWarnAboutNestedUpdates
+    ) {
+      didWarnAboutNestedUpdates = true;
+      warningWithoutStack(
+        false,
+        'Render methods should be a pure function of props and state; ' +
+          'triggering nested component updates from render is not allowed. ' +
+          'If necessary, trigger nested updates in componentDidUpdate.\n\n' +
+          'Check the render method of %s.',
+        getComponentName(ReactCurrentFiber.current.type) || 'Unknown',
+      );
+    }
+  }
+
+  const update = createUpdate(expirationTime);
+  // Caution: React DevTools currently depends on this property
+  // being called "element".
+  update.payload = {element};
+
+  callback = callback === undefined ? null : callback;
+  if (callback !== null) {
+    warningWithoutStack(
+      typeof callback === 'function',
+      'render(...): Expected the last optional `callback` argument to be a ' +
+        'function. Instead received: %s.',
+      callback,
+    );
+    update.callback = callback;
+  }
+  // 更新fiber实例
+  enqueueUpdate(current, update);
+  // 执行任务
+  scheduleWork(current, expirationTime);
+  return expirationTime;
+}
+```
+**处理更新**
+
+调用scheduleWork方法处理更新任务，实现见上文
+
+**提交更新**
+
+处理完更新后需要确认提交更新至渲染模块，然后渲染模块才能将更新渲染至DOM。
+``` js
+import {
+  commitBeforeMutationLifeCycles,
+  commitResetTextContent,
+  commitPlacement,
+  commitDeletion,
+  commitWork,
+  commitLifeCycles,
+  commitAttachRef,
+  commitDetachRef,
+} from './ReactFiberCommitWork';
+
+```
+提交更新是最后确认更新组件的阶段，主要逻辑如下：
 
 ## 本文不断更新中
 
