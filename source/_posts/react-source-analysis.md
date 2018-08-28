@@ -951,6 +951,76 @@ const ReactDOM: Object = {
 ```
 
 其实`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。从字面意思可以看出它是将"子DOM"插入容器的方法，我们看下`legacyRenderSubtreeIntoContainer`源码实现:
+``` js
+function legacyRenderSubtreeIntoContainer(
+  parentComponent: ?React$Component<any, any>,
+  children: ReactNodeList,
+  container: DOMContainer,
+  forceHydrate: boolean,
+  callback: ?Function,
+) {
+  // 检查提供的DOM节点是有效的节点元素
+  invariant(
+    isValidContainer(container),
+    'Target container is not a DOM element.',
+  );
+
+  if (__DEV__) {
+    // 开发模式render时进行检查并提供许多有用的警告和错误提示信息
+    topLevelUpdateWarnings(container);
+  }
+
+  // TODO: Without `any` type, Flow says "Property cannot be accessed on any
+  // member of intersection type." Whyyyyyy.
+  let root: Root = (container._reactRootContainer: any);
+  if (!root) {
+    // 创建ReactRoot对象
+    root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
+      container,
+      forceHydrate,
+    );
+    if (typeof callback === 'function') {
+      const originalCallback = callback;
+      callback = function() {
+        const instance = DOMRenderer.getPublicRootInstance(root._internalRoot);
+        originalCallback.call(instance);
+      };
+    }
+    // 首次安装不应该批处理
+    DOMRenderer.unbatchedUpdates(() => {
+      // 对newRoot对象进行更新
+      if (parentComponent != null) {
+        root.legacy_renderSubtreeIntoContainer(
+          parentComponent,
+          children,
+          callback,
+        );
+      } else {
+        root.render(children, callback);
+      }
+    });
+  } else {
+    if (typeof callback === 'function') {
+      const originalCallback = callback;
+      callback = function() {
+        const instance = DOMRenderer.getPublicRootInstance(root._internalRoot);
+        originalCallback.call(instance);
+      };
+    }
+    // 对root对象进行更新
+    if (parentComponent != null) {
+      root.legacy_renderSubtreeIntoContainer(
+        parentComponent,
+        children,
+        callback,
+      );
+    } else {
+      root.render(children, callback);
+    }
+  }
+  return DOMRenderer.getPublicRootInstance(root._internalRoot);
+}
+```
 
 ## 高级指南
 
