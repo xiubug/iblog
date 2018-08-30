@@ -2,7 +2,7 @@
 title: css 文本两边对齐有些文字的间距就被拉开了
 date: 2018-08-28 17:44:03
 tags: 
-    - text-align
+    - css
 categories:
     - css
 ---
