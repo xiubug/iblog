@@ -13,3 +13,13 @@ categories:
 1. package之间相互依赖，开发人员需要在本地手动执行**npm link**，维护版本号的更替；
 2. issue难以统一追踪，管理，因为其分散在独立的repo里；
 3. 每一个package都包含独立的node_modules，而且大部分都包含babel,webpack等开发时依赖，安装耗时冗余并且占用过多空间。
+
+
+## yarn workspaces
+
+### 命令
+
+#### 在根目录安装 npm 包，以 danger 为例：
+``` bash
+$ yarn add danger --dev -W
+``` 
