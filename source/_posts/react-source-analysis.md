@@ -764,12 +764,11 @@ module.exports = React.default || React;
 
 上述代码中执行`import React from 'react'`时，其实引入的就是这里提供的对象。
 
-这里需要说明一点：这里为什么会导出 `React.default || React`？
+这里需要说明一点：这里为什么会导出 React.default || React？（以下提到的插件都可以在源码中找到）
 1. **React.default 用于 Jest 测试**
 babel解析器将 es6 的 export、import等模块关键字转换成 commonjs 的规范，babel 转换 es6 的模块输出逻辑非常简单，即将所有输出都赋值给 exports。其中`packages/react/src/React.js`使用`export default`导出 React 对象，这里 babel 会将其转化`exports.default = React`，因此导入的结果其实是一个含 default 属性的对象，因此需要使用 React.default 来获取实际的 React 对象。
 2. **React 用于 Rollup**
 rollup-plugin-node-resolve 插件可以解决 ES6 模块的查找导入，如果npm中的包以CommonJS模块的形式出现的，我们可以使用rollup-plugin-commonjs 将CommonJS模块转换为ES6来为Rollup获得兼容（即令(ES6)import === (CommonJS)require），导入的结果其实是不含 default 属性的对象，因此直接使用 React 来获取实际的 React 对象。
-这些插件都可以在源码中找到。
 
 在这个入口 JS 的上方我们可以找到 React 的来源：`const React = require('./src/React');`，我们来看一下这块儿的实现，它定义在`packages/react/src/React.js` 中，
 
