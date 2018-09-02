@@ -957,6 +957,7 @@ const ReactDOM: Object = {
 
 其实`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。从字面意思可以看出它是将"子DOM"插入容器的方法，我们看下`legacyRenderSubtreeIntoContainer`源码实现:
 ``` js
+// 渲染组件的子组件树至父容器
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
   children: ReactNodeList,
@@ -978,8 +979,8 @@ function legacyRenderSubtreeIntoContainer(
   // TODO: Without `any` type, Flow says "Property cannot be accessed on any
   // member of intersection type." Whyyyyyy.
   let root: Root = (container._reactRootContainer: any);
-  if (!root) {
-    // 创建ReactRoot对象
+  if (!root) { // 初次渲染时初始化
+    // 创建react根容器，并缓存react根容器至DOM容器的reactRootContainer属性
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
@@ -991,7 +992,8 @@ function legacyRenderSubtreeIntoContainer(
         originalCallback.call(instance);
       };
     }
-    // 首次安装不应该批处理
+    // 初始化容器相关
+    // Initial mount should not be batched.
     DOMRenderer.unbatchedUpdates(() => {
       // 对newRoot对象进行更新
       if (parentComponent != null) {
