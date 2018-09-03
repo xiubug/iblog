@@ -7,15 +7,19 @@ categories:
     - programm
 ---
 
-## npm 包
+## 命令行
 
-### node.js 命令行参数解析工具
+### minimist 轻量级的命令行参数解析引擎
 
-#### minimist 轻量级的命令行参数解析引擎
+### chalk 命令行彩色输出
 
-### 命令行颜色工具
+## 加载器
 
-#### chalk 命令行彩色输出
+### esm 零依赖ES模块加载器
+
+## hash
+
+### [hash-sum](https://github.com/bevacqua/hash-sum) 快速唯一 hash 生成器
 
 ## 静态网站托管服务平台
 
