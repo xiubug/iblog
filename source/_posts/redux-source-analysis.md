@@ -462,6 +462,35 @@ function observable() {
 #### 最后
 最后执行`dispatch({ type: ActionTypes.INIT })`，用来根据 reducer 初始化 store 的状态。
 
+### compose.js
+`compose`可以接受一组函数参数，然后从右到左来组合多个函数（这是函数式编程中的方法），最后返回一个组合函数：
+``` js
+/**
+ * For example, compose(f, g, h) is identical to doing
+ * (...args) => f(g(h(...args))).
+ */
+export default function compose(...funcs) {
+  if (funcs.length === 0) {
+    return arg => arg
+  }
+
+  if (funcs.length === 1) {
+    return funcs[0]
+  }
+
+  return funcs.reduce((a, b) => (...args) => a(b(...args)))
+}
+```
+`compose`其作用是把一系列的函数，组装生成一个新的函数，并且从后到前，后面参数的执行结果作为其前一个的参数，当需要把多个 store 增强器 依次执行的时候，需要用到它。
+
+#### 参数
+**(...funcs)：**需要合成的多个函数。每个函数都接收一个函数作为参数，然后返回一个函数。
+
+#### 返回值
+**(Function)：**从右到左把接收到的函数合成后的最终函数。
+
+### applyMiddleware.js
+
 
 
 
