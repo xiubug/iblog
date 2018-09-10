@@ -119,6 +119,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
         }
     }
 
+  // 读取由 store 管理的状态树
   function getState() {
     if (isDispatching) {
       throw new Error(
@@ -132,6 +133,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
   }
 
   function subscribe(listener) {
+    // 判断传入的参数是否为函数
     if (typeof listener !== 'function') {
       throw new Error('Expected the listener to be a function.')
     }
@@ -177,20 +179,21 @@ export default function createStore(reducer, preloadedState, enhancer) {
           'Use custom middleware for async actions.'
       )
     }
-
+    // 判断 action 是否有 type｛必须｝ 属性
     if (typeof action.type === 'undefined') {
       throw new Error(
         'Actions may not have an undefined "type" property. ' +
           'Have you misspelled a constant?'
       )
     }
-
+    // 如果正在 dispatch 则抛出错误
     if (isDispatching) {
       throw new Error('Reducers may not dispatch actions.')
     }
-
+    // 对抛出 error 的兼容，但是无论如何都会继续执行 isDispatching = false 的操作
     try {
       isDispatching = true
+      // 使用 currentReducer 来操作传入 当前状态和 action，放回处理后的状态
       currentState = currentReducer(currentState, action)
     } finally {
       isDispatching = false
@@ -205,16 +208,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
     return action
   }
 
-  /**
-   * Replaces the reducer currently used by the store to calculate the state.
-   *
-   * You might need this if your app implements code splitting and you want to
-   * load some of the reducers dynamically. You might also need this if you
-   * implement a hot reloading mechanism for Redux.
-   *
-   * @param {Function} nextReducer The reducer for the store to use instead.
-   * @returns {void}
-   */
+  // 判断参数是否是函数类型
   function replaceReducer(nextReducer) {
     if (typeof nextReducer !== 'function') {
       throw new Error('Expected the nextReducer to be a function.')
@@ -224,23 +218,9 @@ export default function createStore(reducer, preloadedState, enhancer) {
     dispatch({ type: ActionTypes.REPLACE })
   }
 
-  /**
-   * Interoperability point for observable/reactive libraries.
-   * @returns {observable} A minimal observable of state changes.
-   * For more information, see the observable proposal:
-   * https://github.com/tc39/proposal-observable
-   */
   function observable() {
     const outerSubscribe = subscribe
     return {
-      /**
-       * The minimal observable subscription method.
-       * @param {Object} observer Any object that can be used as an observer.
-       * The observer object should have a `next` method.
-       * @returns {subscription} An object with an `unsubscribe` method that can
-       * be used to unsubscribe the observable from the store, and prevent further
-       * emission of values from the observable.
-       */
       subscribe(observer) {
         if (typeof observer !== 'object' || observer === null) {
           throw new TypeError('Expected the observer to be an object.')
@@ -288,7 +268,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
 调用完函数的返回值：dispatch、subscribe、getState、replaceReducer 和 [$$observable]，这就是我们开发中主要使用的几个接口。
 
 #### enhancer
-如果`enhancer`参数存在且是个合法的函数，那么就调用`enhancer`函数。`enhancer`实际上是一个高阶函数，它的参数是创建`store`的函数`createStore`，返回值是一个可以创建功能更加强大的`store`的函数(enhanced store creator)，这和React中的高阶组件的概念很相似。store enhancer 函数的结构一般如下：
+如果`enhancer`参数存在且是个合法的函数，那么就调用`enhancer`函数。`enhancer`实际上是一个高阶函数，它的参数是创建`store`的函数`createStore`，返回值是一个可以创建功能更加强大的`store`的函数(enhanced store creator)，这和 React 中的高阶组件的概念很相似。store enhancer 函数的结构一般如下：
 ``` js
 function enhancerCreator() {
   return createStore => (...args) => {
@@ -320,19 +300,167 @@ export default function autoLogger() {
 `autoLogger()`改变了`store dispatch`的默认行为，在每次发送`action`前后，都会输出日志信息，然后在创建`store`上，使用`autoLogger()`这个store enhancer:
 ``` js
 // store.js
-import { createStore, combineReducers, applyMiddleware } from 'redux';
+import { createStore, combineReducers } from 'redux';
 import * as reducer from '../reducer';
-import thunk from 'redux-thunk'; // 中间件，有了这个就可以支持异步action
+import autLogger from '../autoLogger';
 
 //创建一个 Redux store 来以存放应用中所有的 state，应用中应有且仅有一个 store。
 
 var store = createStore(
 	combineReducers(reducer),
-	applyMiddleware(thunk)
+	autLogger()
 );
 
 export default store;
 ```
+
+#### getState
+``` js
+// 读取由 store 管理的状态树
+function getState() {
+  if (isDispatching) {
+    throw new Error(
+      'You may not call store.getState() while the reducer is executing. ' +
+        'The reducer has already received the state as an argument. ' +
+        'Pass it down from the top reducer instead of reading it from the store.'
+    )
+  }
+
+  return currentState
+}
+```
+这个函数可以获取当前的状态，createStore 中的 currentState 储存当前的状态树，这是一个闭包，这个参数会持久存在，并且所有的操作状态都是改变这个引用，getState 函数返回当前的 currentState。
+
+#### subscribe
+``` js
+function subscribe(listener) {
+  // 判断传入的参数是否为函数
+  if (typeof listener !== 'function') {
+    throw new Error('Expected the listener to be a function.')
+  }
+
+  if (isDispatching) {
+    throw new Error(
+      'You may not call store.subscribe() while the reducer is executing. ' +
+        'If you would like to be notified after the store has been updated, subscribe from a ' +
+        'component and invoke store.getState() in the callback to access the latest state. ' +
+        'See https://redux.js.org/api-reference/store#subscribe(listener) for more details.'
+    )
+  }
+
+  let isSubscribed = true
+
+  ensureCanMutateNextListeners()
+  nextListeners.push(listener)
+
+  return function unsubscribe() {
+    if (!isSubscribed) {
+      return
+    }
+
+    if (isDispatching) {
+      throw new Error(
+        'You may not unsubscribe from a store listener while the reducer is executing. ' +
+          'See https://redux.js.org/api-reference/store#subscribe(listener) for more details.'
+      )
+    }
+
+    isSubscribed = false
+
+    ensureCanMutateNextListeners()
+    const index = nextListeners.indexOf(listener)
+    nextListeners.splice(index, 1)
+  }
+}
+```
+这个函数可以给 store 的状态添加订阅监听函数，一旦调用`dispatch`，所有的监听函数就会执行；`nextListeners`就是储存当前监听函数的列表，调用`subscribe`，传入一个函数作为参数，那么就会给`nextListeners`列表`push`这个函数；同时调用`subscribe`函数会返回一个`unsubscribe`函数，用来解绑当前传入的函数，同时在`subscribe`函数定义了一个`isSubscribed`标志变量来判断当前的订阅是否已经被解绑，解绑的操作就是从`nextListeners`列表中删除当前的监听函数。
+
+#### dispatch
+``` js
+function dispatch(action) {
+    if (!isPlainObject(action)) {
+      throw new Error(
+        'Actions must be plain objects. ' +
+          'Use custom middleware for async actions.'
+      )
+    }
+    // 判断 action 是否有 type｛必须｝ 属性
+    if (typeof action.type === 'undefined') {
+      throw new Error(
+        'Actions may not have an undefined "type" property. ' +
+          'Have you misspelled a constant?'
+      )
+    }
+    // 如果正在 dispatch 则抛出错误
+    if (isDispatching) {
+      throw new Error('Reducers may not dispatch actions.')
+    }
+    // 对抛出 error 的兼容，但是无论如何都会继续执行 isDispatching = false 的操作
+    try {
+      isDispatching = true
+      // 使用 currentReducer 来操作传入 当前状态和 action，放回处理后的状态
+      currentState = currentReducer(currentState, action)
+    } finally {
+      isDispatching = false
+    }
+
+    const listeners = (currentListeners = nextListeners)
+    for (let i = 0; i < listeners.length; i++) {
+      const listener = listeners[i]
+      listener()
+    }
+
+    return action
+  }
+```
+
+这个函数是用来触发状态改变的，它接受一个 action 对象作为参数，然后 reducer 根据 action 的属性以及当前 store 的状态来生成一个新的状态，赋予当前状态，改变 store 的状态；即`currentState = currentReducer(currentState, action)`；这里的`currentReducer`是一个函数，它接受两个参数：当前状态 和 action，然后返回计算出来的新的状态；然后遍历`nextListeners`列表，调用每个监听函数。
+
+#### replaceReducer
+``` js
+// 判断参数是否是函数类型
+function replaceReducer(nextReducer) {
+  if (typeof nextReducer !== 'function') {
+    throw new Error('Expected the nextReducer to be a function.')
+  }
+
+  currentReducer = nextReducer
+  dispatch({ type: ActionTypes.REPLACE })
+}
+```
+这个函数可以替换 store 当前的 reducer 函数，首先直接用`currentReducer = nextReducer`替换；然后`dispatch({ type: ActionTypes.INIT })`，用来初始化替换后 reducer 生成的初始化状态并且赋予 store 的状态。
+
+#### observable
+``` js
+function observable() {
+  const outerSubscribe = subscribe
+  return {
+    subscribe(observer) {
+      if (typeof observer !== 'object' || observer === null) {
+        throw new TypeError('Expected the observer to be an object.')
+      }
+
+      function observeState() {
+        if (observer.next) {
+          observer.next(getState())
+        }
+      }
+
+      observeState()
+      const unsubscribe = outerSubscribe(observeState)
+      return { unsubscribe }
+    },
+
+    [$$observable]() {
+      return this
+    }
+  }
+}
+```
+对于这个函数，是不直接暴露给开发者的，它提供了给其他观察者模式/响应式库的交互操作。
+
+#### 最后
+最后执行`dispatch({ type: ActionTypes.INIT })`，用来根据 reducer 初始化 store 的状态。
 
 
 
