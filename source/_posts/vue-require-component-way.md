@@ -1,10 +1,10 @@
 ---
 title: Vue 组件注册时什么情况在require后面加上default
-date: 2018-08-20 22:20:51
+date: 2018-05-20 22:20:51
 tags:
-    - require
+    - component
 categories:
-    - nodejs
+    - vue
 ---
 
 今天团队内部一起回顾之前项目时，发现两个记忆中相同配置的项目，但其中一个项目可以直接用这样的代码注册组件：

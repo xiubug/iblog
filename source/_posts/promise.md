@@ -1,6 +1,6 @@
 ---
 title: promise
-date: 2018-09-03 20:32:08
+date: 2018-05-25 23:32:08
 tags:
     - promise
 categories:
