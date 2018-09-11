@@ -19,16 +19,16 @@ Redux 是可预测的状态管理框架，它很好的解决多交互，多数�
 
 正常的一个同步数据流为：view 层触发 actionCreator，actionCreator 通过 store.dispatch(action) 方法变更 reducer。但是面对多种多样的业务场景，同步数据流方式显然无法满足。对于改变reducer的异步数据操作，就需要用到中间件的概念，如图所示：
 
-![img1.png](redux-source-analysis/img1.png)
+![img1.png](redux-source-analysis/img1.jpeg)
 
 ### 源码结构
 Redux 的源码结构很简单，源码都在 src 目录下，其目录结构如下：
 ``` 
 src
 ├── utils ---------------------------------------- 工具函数
-├── applyMiddleware.js --------------------------- 
+├── applyMiddleware.js --------------------------- 加载 middleware
 ├── bindActionCreators.js ------------------------ 生成将 action creator 包裹在 dispatch 里的函数
-├── combineReducers.js ---------------------------
+├── combineReducers.js --------------------------- 合并 reducer 函数
 ├── compose.js ----------------------------------- 组合函数
 ├── createStore.js ------------------------------- 创建一个 Redux store 来储存应用中所有的 state
 ├── index.js ------------------------------------- 入口 js
@@ -573,7 +573,7 @@ dispatch = f(g(h(store.dispatch)))
 **store：**原来的store；
 **dispatch：**改变后的dispatch。
 ### combineReducers.js
-Reducer 是管理 state 的一个模块，它主要做的事情就是当项目初始化时，返回 initalState，当用户用操作时，它会根据 action.type 进行相应地更新 state。需要注意的是它是一个纯函数，换言之，它不会改变传入的 state。现在我们来看一下 combineReducers 源码（有删减，删除了一些验证代码）：
+Reducer 是管理 state 的一个模块，它主要做的事情就是当项目初始化时，返回 initalState，当用户用操作时，它会根据 action 进行相应地更新。需要注意的是它是一个纯函数，换言之，它不会改变传入的 state。现在我们来看一下 combineReducers 源码（源码有删减，删除了一些验证代码）：
 ``` js
 import ActionTypes from './utils/actionTypes'
 import warning from './utils/warning'
@@ -647,7 +647,19 @@ export default function combineReducers(reducers) {
   }
 }
 ```
-该函数最终返回 combination 函数，它就是真正传入 createStore 的 reducer 函数，接受一个初始化状态和一个action 参数；每次调用的时候会去遍历 finalReducer（有效的 reducer 列表），获取列表中每个 reducer 对应的先前状态： `var previousStateForKey = state[key]`；看到这里就应该明白传入的 `reducers` 组合为什么 `key` 要和 store 里面的 state 的 `key` 相对应；然后得到当前遍历项的下一个状态： `var nextStateForKey = reducer(previousStateForKey, action)`；然后把它添加到整体的下一个状态： `nextState[key] = nextStateForKey`，每次遍历会判断整体状态是否改变： `hasChanged = hasChanged || nextStateForKey !== previousStateForKey`。在最后，如果没有改变就返回原有状态，如果改变了就返回新生成的状态对象： `return hasChanged ? nextState : state`。
+该函数最终返回 combination 函数，它就是真正 createStore 函数的 reducer，接受一个初始化状态和一个 action 参数；该函数每次调用大致执行以下几个操作：
+**1、**`for (let i = 0; i < finalReducerKeys.length; i++) { ... }：`遍历 finalReducer（有效的 reducer 列表）；
+**2、**`var previousStateForKey = state[key]：`当前遍历项的之前状态，看到这里就应该明白传入的 `reducers` 组合为什么 `key` 要和 store 里面的 state 的 `key` 相对应了；
+**3、**`var nextStateForKey = reducer(previousStateForKey, action)：`当前遍历项的下一个状态；
+**4、**`nextState[key] = nextStateForKey：`将 当前遍历项的下一个状态添加到 nextState；
+**5、**`hasChanged = hasChanged || nextStateForKey !== previousStateForKey：`判断状态是否改变；
+**6、**`return hasChanged ? nextState : state：`如果没有改变就返回原有状态，如果改变了就返回新生成的状态对象。
+
+#### 参数
+**reducers (Object): **一个对象，它的值（value）对应不同的 reducer 函数，这些 reducer 函数后面会被合并成一个。
+
+#### 返回值
+**(Function)：**它是真正 createStore 函数的 reducer，接受一个初始化状态和一个 action 参数；每次调用的时候会去遍历 finalReducer（有效的 reducer 列表），然后调用列表中每个 reducer，最终构造一个与 reducers 对象结构相同的 state 对象。
 
 ### bindActionCreators.js
 Redux 中的 bindActionCreators 是通过 dispatch 将 action 包裹起来，这样就可以通过 bindActionCreators 创建方法调用 dispatch(action)。现在我们来看一下 bindActionCreators 源代码：
