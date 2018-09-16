@@ -955,7 +955,7 @@ const ReactDOM: Object = {
 };
 ```
 
-其实`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。从字面意思可以看出它是将"子DOM"插入容器的方法，我们看下`legacyRenderSubtreeIntoContainer`源码实现:
+这里`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。从字面意思可以看出它是将"子DOM"插入容器的方法，我们看下`legacyRenderSubtreeIntoContainer`源码实现:
 ``` js
 // 渲染组件的子组件树至父容器
 function legacyRenderSubtreeIntoContainer(
@@ -1035,19 +1035,29 @@ function legacyRenderSubtreeIntoContainer(
 
 Portals 提供了一种很好的方法，将子节点渲染到父组件 DOM 层次结构之外的 DOM 节点。
 
-## React Fiber（该章节先不要看，我自己看了下都不懂，有点乱）
+## React Fiber
 
 ### 背景
 我们都知道浏览器渲染引擎是单线程的，在 React15.x 及之前版本，从 setState 开始到渲染完成整个过程是不受控制且连续不中断完成的，由于该过程将会占用整个线程，则其他任务都会被阻塞，如样式计算、界面布局以及许多情况下的绘制等。如果需要渲染的是一个很大、层级很深的组件，这可能就会使用户感觉明显卡顿，比如更新一个组件需要1毫秒，如果有200个组件要更新，那就需要200毫秒，在这200毫秒的更新过程中，浏览器唯一的主线程在专心运行更新操作，无暇去做其他任何事情。想象一下，在这200毫秒内，用户往一个input元素中输入点什么，敲击键盘也不会立即获得响应，虽然渲染输入按键结果是浏览器主线程的工作，但是浏览器主线程被React占用，抽不出空，最后的结果就是用户敲了按键看不到反应，等React更新过程结束之后，咔咔咔那些按键一下子出现在input元素里了，这个版本的调和器可以称为**栈调和器（Stack Reconciler）**。Stack Reconcilier 的主要缺陷就是**不能暂停渲染任务，也不能切分任务，更无法有效平衡组件更新渲染与动画相关任务间的执行顺序（即不能划分任务优先级），这样就很有可能导致重要任务卡顿，动画掉帧等问题。**
 
-为了解决这个问题，React 团队经过两年多的努力，提出了一个更先进的调和器，它允许渲染过程可分段完成，而不必一次性完成，在渲染期间可返回到主线程控制执行其他任务。这是通过计算部分组件树的变更，并暂停渲染更新，询问主线程是否有更高需求的绘制或者更新任务需要执行，这些高需求的任务完成后才开始渲染。这一切的实现是在代码层引入了一个新的数据结构：**Fiber对象**，每一个组件实例对应有一个fiber实例，此fiber实例负责管理组件实例的更新，渲染任务及与其他fiber实例的通信，这个先进的调和器叫做**纤维调和器（Fiber Reconciler）**，它提供的新功能主要有：
+为了解决这个问题，React 团队经过两年多的努力，提出了一个更先进的调和器，它允许渲染过程分段完成，而不必一次性完成，在渲染期间可返回到主线程控制执行其他任务。这是通过计算部分组件树的变更，并暂停渲染更新，询问主线程是否有更高需求的绘制或者更新任务需要执行，这些高需求的任务完成后再重新渲染。这一切的实现是在代码层引入了一个新的数据结构：**Fiber对象**，每一个组件实例对应有一个fiber实例，此fiber实例负责管理组件实例的更新，渲染任务及与其他fiber实例的通信，这个先进的调和器叫做**纤维调和器（Fiber Reconciler）**，它提供的新功能主要有：
 **一：**把可中断的任务拆分成小任务；
 **二：**可重用各分阶段任务，对正在做的工作调整优先次序；
 **三：**可以在父子组件任务间前进后退切换任务，以支持React执行过程中的布局刷新；
 **四：**支持 render 方法返回多个元素；
 **五：**对异常边界处理提供了更好的支持；
 
-### Fiber与JavaScript 
+### Fiber on JavaScript
+前面提到 Fiber 可以异步实现不同优先级任务的协调执行，那么对于 DOM 渲染器而言，在 JavaScript 层是否提供这种方式，还是说只能使用setTimeout模拟呢？目前新版本主流浏览器已经提供了可用API：requestIdleCallback 和 requestAnimationFrame：
+**requestIdleCallback：**在线程空闲时调度执行低优先级函数。
+**requestAnimationFrame：**在下一个动画帧调度执行高优先级函数。
+
+#### 空闲期（Idle Period）
+通常，客户端线程执行任务时会以帧的形式划分，大部分设备控制在30-60帧是不会影响用户体验；在两个执行帧之间，主线程通常会有一小段空闲时间，requestIdleCallback可以在这个空闲期（Idle Period）调用空闲期回调（Idle Callback），执行一些任务。
+![img2.png](react-source-analysis/img2.png)
+
+#### Fiber 与 requestIdleCallback
+Fiber 所做的就是需要分解渲染任务，根据优先级使用API调度，异步执行指定任务。低优先级任务由 requestIdleCallback 处理；高优先级任务，如动画相关的由 requestAnimationFrame 处理；requestIdleCallback 可以在多个空闲期调用空闲期回调，执行任务；requestIdleCallback 方法提供 deadline，即任务执行限制时间，以切分任务，避免长时间执行，阻塞UI渲染而导致掉帧；
 
 ### Fiber与组件
 
