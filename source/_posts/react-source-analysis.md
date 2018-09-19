@@ -1045,15 +1045,17 @@ Portals 提供了一种很好的方法，将子节点渲染到父组件 DOM 层�
 **四：**支持 render 方法返回多个元素；
 **五：**对异常边界处理提供了更好的支持；
 
-### 调度器（scheduler）
-前面提到 Fiber 可以异步实现不同优先级任务的协调执行，那么对于 DOM 渲染器而言，在 JavaScript 层是否提供这种方式，还是说只能使用setTimeout模拟呢？目前新版本主流浏览器已经提供了可用API：requestIdleCallback 和 requestAnimationFrame：
+### 调度任务（scheduleWork）
+前面提到 Fiber 可以异步实现不同优先级任务的协调执行，目前在 JavaScript 中也提供了这种方式，在新版主流浏览器有两个可用API：requestIdleCallback 和 requestAnimationFrame：
 **requestIdleCallback：**在线程空闲时调度执行低优先级函数。
 **requestAnimationFrame：**在下一个动画帧调度执行高优先级函数。
 
-通常，客户端线程执行任务时会以帧的形式划分，大部分设备控制在30-60帧是不会影响用户体验；在两个执行帧之间，主线程通常会有一小段空闲时间，requestIdleCallback可以在这个空闲期（Idle Period）调用空闲期回调（Idle Callback），执行一些任务。
+一般网页线程执行任务时会以帧的形式划分，大部分网页控制在30-60帧是不会影响用户体验的；在两个执行帧之间，主线程通常会有一小段空闲时间，requestIdleCallback可以在这个空闲期（Idle Period）调用空闲期回调（Idle Callback），执行一些任务。
 ![img2.png](react-source-analysis/img2.png)
 
-Fiber 所做的就是需要分解渲染任务，根据优先级使用API调度，异步执行指定任务。低优先级任务由 requestIdleCallback 处理；高优先级任务，如动画相关的由 requestAnimationFrame 处理；requestIdleCallback 可以在多个空闲期调用空闲期回调，执行任务；requestIdleCallback 方法提供 deadline，即任务执行限制时间，以切分任务，避免长时间执行，阻塞UI渲染而导致掉帧；
+而 Fiber 所做的就是需要分解渲染任务，根据优先级使用API调度，异步执行指定任务。低优先级任务由 requestIdleCallback 处理；高优先级任务，如动画相关的由 requestAnimationFrame 处理；requestIdleCallback 可以在多个空闲期调用空闲期回调，执行任务；requestIdleCallback 方法提供 deadline，即任务执行限制时间，以切分任务，避免长时间执行，阻塞UI渲染而导致掉帧；
+
+现在我们来看一下 React 调度任务实现的源码：
 ``` js
 // TODO: 目前，只有一个优先级别，Deferred。未来将增加额外的优先级
 var DEFERRED_TIMEOUT = 5000;
@@ -1097,12 +1099,12 @@ function ensureHostCallbackIsScheduled() {
   if (isPerformingWork) {
     return;
   }
-  // Schedule the host callback using the earliest timeout in the list.
+  // 使用列表中最先超时的回调
   var timesOutAt = firstCallbackNode.timesOutAt;
   if (!isHostCallbackScheduled) {
     isHostCallbackScheduled = true;
   } else {
-    // Cancel the existing host callback.
+    // 取消回调
     cancelCallback();
   }
   requestCallback(flushWork, timesOutAt);
@@ -1175,6 +1177,7 @@ function flushWork(didTimeout) {
   }
 }
 
+// 调度任务，这是一个不稳定 api
 function unstable_scheduleWork(callback, options) {
   var currentTime = getCurrentTime();
 
@@ -1199,9 +1202,9 @@ function unstable_scheduleWork(callback, options) {
     previous: null,
   };
 
-  // 将新回调插入列表中, 按其超时顺序排序。
+  // 将新回调插入列表中, 并按其超时顺序排序
   if (firstCallbackNode === null) {
-    // 这是第一个回调列表中。
+    // 这是列表中的第一个回调
     firstCallbackNode = newNode.next = newNode.previous = newNode;
     ensureHostCallbackIsScheduled(firstCallbackNode);
   } else {
@@ -1209,7 +1212,7 @@ function unstable_scheduleWork(callback, options) {
     var node = firstCallbackNode;
     do {
       if (node.timesOutAt > timesOutAt) {
-        // The new callback times out before this one.
+        // 在此之前, 新的回调超时
         next = node;
         break;
       }
@@ -1217,11 +1220,10 @@ function unstable_scheduleWork(callback, options) {
     } while (node !== firstCallbackNode);
 
     if (next === null) {
-      // No callback with a later timeout was found, which means the new
-      // callback has the latest timeout in the list.
+      // 找不到稍后超时的回调, 这意味着新的回调在列表中具有最新的超时。
       next = firstCallbackNode;
     } else if (next === firstCallbackNode) {
-      // The new callback has the earliest timeout in the entire list.
+      // 新回调在整个列表中具有最早的超时。
       firstCallbackNode = newNode;
       ensureHostCallbackIsScheduled(firstCallbackNode);
     }
@@ -1467,21 +1469,20 @@ if (typeof window === 'undefined') { // 非浏览器环境
     }
   };
 
-  // 自定义模拟requestIdleCallback
+  // 自定义 模拟requestIdleCallback
   requestCallback = function(callback, absoluteTimeout) {
     // 回调函数
     scheduledCallback = callback;
     timeoutTime = absoluteTimeout;
     if (isPerformingIdleWork) {
-      // If we're already performing idle work, an error must have been thrown.
-      // Don't wait for the next frame. Continue working ASAP, in a new event.
+      // 如果我们已经在执行空闲工作, 则必须抛出错误。
+      // 不要等待下一帧。在新事件中继续尽快工作 ASAP。
       window.postMessage(messageKey, '*');
     } else if (!isAnimationFrameScheduled) {
-      // If rAF didn't already schedule one, we need to schedule a frame.
-      // TODO: If this rAF doesn't materialize because the browser throttles, we
-      // might want to still have setTimeout trigger rIC as a backup to ensure
-      // that we keep performing work.
+      // 如果当前没有调度帧回调函数，我们需要进行一个调度帧回调函数
+      // TODO: rAF 仍是 setTimeout
       isAnimationFrameScheduled = true;
+      // 初始开始执行帧回调 
       requestAnimationFrameWithTimeout(animationTick);
     }
   };
