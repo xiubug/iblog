@@ -8,7 +8,7 @@ categories:
 top: 100
 ---
 
-`版本：v16.5.1`
+`版本：v16.5.2`
 
 ## 前言
 
@@ -1045,12 +1045,11 @@ Portals 提供了一种很好的方法，将子节点渲染到父组件 DOM 层�
 **四：**支持 render 方法返回多个元素；
 **五：**对异常边界处理提供了更好的支持；
 
-### JavaScript 实现 Fiber
+### 调度器（scheduler）
 前面提到 Fiber 可以异步实现不同优先级任务的协调执行，那么对于 DOM 渲染器而言，在 JavaScript 层是否提供这种方式，还是说只能使用setTimeout模拟呢？目前新版本主流浏览器已经提供了可用API：requestIdleCallback 和 requestAnimationFrame：
 **requestIdleCallback：**在线程空闲时调度执行低优先级函数。
 **requestAnimationFrame：**在下一个动画帧调度执行高优先级函数。
 
-#### 空闲期（Idle Period）
 通常，客户端线程执行任务时会以帧的形式划分，大部分设备控制在30-60帧是不会影响用户体验；在两个执行帧之间，主线程通常会有一小段空闲时间，requestIdleCallback可以在这个空闲期（Idle Period）调用空闲期回调（Idle Callback），执行一些任务。
 ![img2.png](react-source-analysis/img2.png)
 
@@ -1059,9 +1058,10 @@ Fiber 所做的就是需要分解渲染任务，根据优先级使用API调度�
 // TODO: 目前，只有一个优先级别，Deferred。未来将增加额外的优先级
 var DEFERRED_TIMEOUT = 5000;
 
-// Callbacks are stored as a circular, doubly linked list.
+// 回调被储存为一个双向循环链表
 var firstCallbackNode = null;
 
+// 是否在执行工作
 var isPerformingWork = false;
 
 var isHostCallbackScheduled = false;
@@ -1075,12 +1075,14 @@ if (hasNativePerformanceNow) {
     // We assume that if we have a performance timer that the rAF callback
     // gets a performance timer value. Not sure if this is always true.
     var remaining = getFrameDeadline() - performance.now();
+    // 计算得到当前帧运行剩余时间
     return remaining > 0 ? remaining : 0;
   };
 } else {
   timeRemaining = function() {
     // Fallback to Date.now()
     var remaining = getFrameDeadline() - Date.now();
+    // 计算得到当前帧运行剩余时间
     return remaining > 0 ? remaining : 0;
   };
 }
@@ -1091,8 +1093,8 @@ var deadlineObject = {
 };
 
 function ensureHostCallbackIsScheduled() {
+  // 正在执行工作
   if (isPerformingWork) {
-    // Don't schedule work yet; wait until the next time we yield.
     return;
   }
   // Schedule the host callback using the earliest timeout in the list.
@@ -1106,14 +1108,14 @@ function ensureHostCallbackIsScheduled() {
   requestCallback(flushWork, timesOutAt);
 }
 
+// 刷新第一次回调
 function flushFirstCallback(node) {
   var flushedNode = firstCallbackNode;
 
-  // Remove the node from the list before calling the callback. That way the
-  // list is in a consistent state even if the callback throws.
+  // 在调用回调之前从列表中移除该节点。这样，即使回调抛出, 列表也处于一致状态。
   var next = firstCallbackNode.next;
   if (firstCallbackNode === next) {
-    // This is the last callback in the list.
+    // 这是列表中的最后一个回调。
     firstCallbackNode = null;
     next = null;
   } else {
@@ -1124,7 +1126,7 @@ function flushFirstCallback(node) {
 
   flushedNode.next = flushedNode.previous = null;
 
-  // Now it's safe to call the callback.
+  // 现在调用回调是安全的。
   var callback = flushedNode.callback;
   callback(deadlineObject);
 }
@@ -1183,10 +1185,10 @@ function unstable_scheduleWork(callback, options) {
     options.timeout !== null &&
     options.timeout !== undefined
   ) {
-    // Check for an explicit timeout
+    // 根据传入的 timeout 计算超时
     timesOutAt = currentTime + options.timeout;
   } else {
-    // Compute an absolute timeout using the default constant.
+    // 使用默认常量计算超时
     timesOutAt = currentTime + DEFERRED_TIMEOUT;
   }
 
@@ -1197,9 +1199,9 @@ function unstable_scheduleWork(callback, options) {
     previous: null,
   };
 
-  // Insert the new callback into the list, sorted by its timeout.
+  // 将新回调插入列表中, 按其超时顺序排序。
   if (firstCallbackNode === null) {
-    // This is the first callback in the list.
+    // 这是第一个回调列表中。
     firstCallbackNode = newNode.next = newNode.previous = newNode;
     ensureHostCallbackIsScheduled(firstCallbackNode);
   } else {
@@ -1325,9 +1327,7 @@ var requestCallback;
 var cancelCallback;
 var getFrameDeadline;
 
-if (typeof window === 'undefined') {
-  // If this accidentally gets imported in a non-browser environment, fallback
-  // to a naive implementation.
+if (typeof window === 'undefined') { // 非浏览器环境
   var timeoutID = -1;
   requestCallback = function(callback, absoluteTimeout) {
     timeoutID = setTimeout(callback, 0, true);
@@ -1338,8 +1338,7 @@ if (typeof window === 'undefined') {
   getFrameDeadline = function() {
     return 0;
   };
-} else if (window._schedMock) {
-  // Dynamic injection, only for testing purposes.
+} else if (window._schedMock) { // 动态注入, 仅用于测试目的。
   var impl = window._schedMock;
   requestCallback = impl[0];
   cancelCallback = impl[1];
@@ -1363,6 +1362,7 @@ if (typeof window === 'undefined') {
   }
 
   var scheduledCallback = null;
+  // 是否在执行空闲期回调
   var isIdleScheduled = false;
   var timeoutTime = -1;
 
@@ -1371,9 +1371,8 @@ if (typeof window === 'undefined') {
   var isPerformingIdleWork = false;
 
   var frameDeadline = 0;
-  // We start out assuming that we run at 30fps but then the heuristic tracking
-  // will adjust this value to a faster fps if we get more frequent animation
-  // frames.
+
+  // 用启发式跟踪法，从30fps（即30帧）开始调整得到的更适于当前环境的一帧限制时间；
   var previousFrameTime = 33;
   var activeFrameTime = 33;
 
@@ -1387,27 +1386,28 @@ if (typeof window === 'undefined') {
     Math.random()
       .toString(36)
       .slice(2);
+  // 空闲期回调
   var idleTick = function(event) {
     if (event.source !== window || event.data !== messageKey) {
       return;
     }
-
+    // 重置为false，表明可以调用空闲期回调
     isIdleScheduled = false;
 
     var currentTime = getCurrentTime();
 
     var didTimeout = false;
     if (frameDeadline - currentTime <= 0) {
-      // There's no time left in this idle period. Check if the callback has
-      // a timeout and whether it's been exceeded.
+      // 帧到期时间小于当前时间，说明已过期
       if (timeoutTime !== -1 && timeoutTime <= currentTime) {
-        // Exceeded the timeout. Invoke the callback even though there's no
-        // time left.
+        // 此帧已过期，且发生任务处理函数（执行具体任务，传入的回调）的超时
+        // 需要执行任务处理，下文将调用；
         didTimeout = true;
       } else {
-        // No timeout.
+        // 帧已过期，但没有发生任务处理函数的超时，暂时不调用任务处理函数
         if (!isAnimationFrameScheduled) {
-          // Schedule another animation callback so we retry later.
+          // 当前没有调度别的帧回调函数
+          // 调度下一帧
           isAnimationFrameScheduled = true;
           requestAnimationFrameWithTimeout(animationTick);
         }
@@ -1416,12 +1416,14 @@ if (typeof window === 'undefined') {
       }
     }
 
+    // 缓存的任务处理函数
     timeoutTime = -1;
     var callback = scheduledCallback;
     scheduledCallback = null;
     if (callback !== null) {
       isPerformingIdleWork = true;
       try {
+        // 执行回调
         callback(didTimeout);
       } finally {
         isPerformingIdleWork = false;
@@ -1432,6 +1434,7 @@ if (typeof window === 'undefined') {
   // something better for old IE.
   window.addEventListener('message', idleTick, false);
 
+  // 帧回调
   var animationTick = function(rafTime) {
     isAnimationFrameScheduled = false;
     var nextFrameTime = rafTime - frameDeadline + activeFrameTime;
@@ -1458,12 +1461,15 @@ if (typeof window === 'undefined') {
     }
     frameDeadline = rafTime + activeFrameTime;
     if (!isIdleScheduled) {
+      // 不在执行空闲期回调，表明可以调用空闲期回调
       isIdleScheduled = true;
       window.postMessage(messageKey, '*');
     }
   };
 
+  // 自定义模拟requestIdleCallback
   requestCallback = function(callback, absoluteTimeout) {
+    // 回调函数
     scheduledCallback = callback;
     timeoutTime = absoluteTimeout;
     if (isPerformingIdleWork) {
