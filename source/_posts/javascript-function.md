@@ -61,7 +61,7 @@ true && function(){ /* code */ }();
 
 简单说立即执行函数就是**声明一个匿名函数、马上调用这个匿名函数**。
 
-![img1.jpg](javascript-function/img1.jpg)
+![img1.jpg](/images/javascript-function/img1.jpg)
 
 上面是一个典型的立即执行函数。
 **首先，**声明一个匿名函数 function(){alert('我是匿名函数')}。
@@ -84,7 +84,7 @@ for(var i=0; i<6; i++){
 }
 ```
 为什么 alert 的总是 6 呢，因为 i 是贯穿整个作用域的，而不是给每个 li 分配了一个 i，如下：
-![img2.jpg](javascript-function/img2.jpg)
+![img2.jpg](/images/javascript-function/img2.jpg)
 
 那么怎么解决这个问题呢？用立即执行函数给每个 li 创造一个独立作用域即可：
 ``` js

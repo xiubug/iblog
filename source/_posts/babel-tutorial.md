@@ -27,4 +27,4 @@ at Array.map (<anonymous>)
 将`.webpackrc.js`中的`transform-decorators-legacy`进行删除。
 
 [问题详情：](https://github.com/ant-design/ant-design-pro/pull/1345)
-![img1.png](babel-tutorial/img1.png)
+![babel-tutorial1.png](/images/babel-tutorial/img1.png)

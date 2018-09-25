@@ -7,4 +7,4 @@ categories:
     - es6
 ---
 
-![img1.gif](tree-shaking-tutorial/img1.gif)
+![img1.gif](/images/tree-shaking-tutorial/img1.gif)

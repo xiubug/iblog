@@ -16,21 +16,21 @@ Mac系统是基于Unix内核的图形化操作系统；一般情况下在普通P
 
 **1. 打开dock栏里面的“系统偏好设置”；**
 
-![img1.png](macos-tutorial/img1.png)
+![img1.png](/images/macos-tutorial/img1.png)
 
 **2. 在系统偏好设置里面，找到“安全性与隐私”选项；**
 
-![img2.png](macos-tutorial/img2.png)
+![img2.png](/images/macos-tutorial/img2.png)
 
 **3. 在安全性与隐私里面，找到左下角的锁型图标，然后点击锁，会弹出输入电脑开机密码的窗口，输入密码之后，点击“解锁”按钮，那个锁型变为开启的锁；**
 
-![img3.png](macos-tutorial/img3.png)
+![img3.png](/images/macos-tutorial/img3.png)
 
-![img4.png](macos-tutorial/img4.png)
+![img4.png](/images/macos-tutorial/img4.png)
 
 **4. 解锁后，如果你的电脑里面在允许从以下位置下载应用有三个选项，就在允许从以下位置下载的应用选项中选择“任何来源”，在弹出的确认框里点击“允许来自任何来源”；如果你的电脑里面允许从以下位置下载的应用中只有两个选项，那你就直接去打开你刚才需要安装的那个程序的安装包，双击重新安装，会有一个提示框，也是提示允许来自任何来源安装的，然后就可以安装成功了，最后打开即可。**
 
-![img5.png](macos-tutorial/img5.png)
+![img5.png](/images/macos-tutorial/img5.png)
 
 ### 用终端连接远程服务器
 ``` bash

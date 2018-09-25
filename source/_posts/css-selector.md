@@ -223,7 +223,7 @@ p3，p4 变红。
 
 更多伪类、伪元素选择器，见如下截图：
 
-![img1.png](css-selector/img1.png)
+![css-selector1.png](/images/css-selector/img1.png)
 
 ## 优先级
 

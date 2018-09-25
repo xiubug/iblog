@@ -8,7 +8,7 @@ categories:
 ---
 我们经常发现项目的依赖包版本号前面有的是 ~，有的是 ^，我们以 angular 为例：
 
-![img1.png](npm-package-version/img1.png)
+![img1.png](/images/npm-package-version/img1.png)
 
 **那么 ~ 和 ^ 有什么作用和区别？**
 * **~：**匹配最近的小版本依赖包，比如~1.2.3会匹配所有1.2.x版本，但是不包括1.3.0。

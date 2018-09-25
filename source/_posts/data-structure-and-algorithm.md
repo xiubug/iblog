@@ -20,57 +20,57 @@ categories:
 ### 执行过程图解
 #### 创建
 创建一个空链表：
-![img1.png](data-structure-and-algorithm/img1.png)
+![img1.png](/images/data-structure-and-algorithm/img1.png)
 
 #### 插入链尾
 将`the monster is coming`这些单词按顺序分别插入尾部，创建“the”节点：
-![img2.png](data-structure-and-algorithm/img2.png)
+![img2.png](/images/data-structure-and-algorithm/img2.png)
 
 连接起来：
-![img3.png](data-structure-and-algorithm/img3.png)
+![img3.png](/images/data-structure-and-algorithm/img3.png)
 
 创建“monster”节点：
-![img4.png](data-structure-and-algorithm/img4.png)
+![img4.png](/images/data-structure-and-algorithm/img4.png)
 
 再连接起来：
-![img5.png](data-structure-and-algorithm/img5.png)
+![img5.png](/images/data-structure-and-algorithm/img5.png)
 
 以此类推，将剩下的节点全部创建并连接起来：
-![img6.png](data-structure-and-algorithm/img6.png)
+![img6.png](/images/data-structure-and-algorithm/img6.png)
 
-![img7.png](data-structure-and-algorithm/img7.png)
+![img7.png](/images/data-structure-and-algorithm/img7.png)
 
 #### 创建迭代器
 迭代器的 current 指针初始指向head：
-![img8.png](data-structure-and-algorithm/img8.png)
+![img8.png](/images/data-structure-and-algorithm/img8.png)
 
 执行两次 next 操作， current 指针指向索引为2的节点：
-![img9.png](data-structure-and-algorithm/img9.png)
+![img9.png](/images/data-structure-and-algorithm/img9.png)
 
 此时的节点值为：
-![img10.png](data-structure-and-algorithm/img10.png)
+![img10.png](/images/data-structure-and-algorithm/img10.png)
 
 设置 current 指针指向索引为3的节点：
-![img11.png](data-structure-and-algorithm/img11.png)
+![img11.png](/images/data-structure-and-algorithm/img11.png)
 
 #### 插入节点
 在索引1后面插入“big”节点。先将 current 指针指向索引为1的节点，创建一个"big"新节点：
-![img12.png](data-structure-and-algorithm/img12.png)
+![img12.png](/images/data-structure-and-algorithm/img12.png)
 
 插入到 current 指向位置：
-![img13.png](data-structure-and-algorithm/img13.png)
+![img13.png](/images/data-structure-and-algorithm/img13.png)
 
 #### 删除节点
 将“big”节点删除，移动当前指针 current 到“big”节点位置：
-![img14.png](data-structure-and-algorithm/img14.png)
+![img14.png](/images/data-structure-and-algorithm/img14.png)
 
 执行删除操作，断掉“big”节点与前后两节点的 next 和 prev 指针，然后将“the”节点与“monster”节点关联起来：
-![img15.png](data-structure-and-algorithm/img15.png)
-![img16.png](data-structure-and-algorithm/img16.png)
+![img15.png](/images/data-structure-and-algorithm/img15.png)
+![img16.png](/images/data-structure-and-algorithm/img16.png)
 
 #### 双向循环链表
 前面的双向链表的 head 节点和链尾没有连接关系，所以如果要访问最后一个节点的话需要从头开始遍历，直到最后一个节点。在双向链表基础上改进一下，把 header 节点的 prev 指针指向最后一个节点，而最后一个节点的 next 指针指向 header 节点，于是便构成双向循环链表。
-![img17.png](data-structure-and-algorithm/img17.png)
+![img17.png](/images/data-structure-and-algorithm/img17.png)
 
 ### 实现细节
 我们的链表将包括两个构造函数：Node 和 DoublyList。看看它们是怎样运作的。

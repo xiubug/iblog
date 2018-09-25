@@ -123,7 +123,7 @@ console.log(person.name); // Jerry
 
 要简单理解栈的存取方式，我们可以通过类比乒乓球盒子来分析，如下图左侧：
 
-![img1.png](javascript-types/img1.png)
+![img1.png](/images/javascript-types/img1.png)
 
 这种乒乓球的存放方式与栈中存取数据的方式如出一辙。处于盒子中最顶层的乒乓球5，它一定是最后被放进去，但可以最先被使用。而我们想要使用底层的乒乓球1，就必须将上面的4个乒乓球取出来，让乒乓球1处于盒子顶层。这就是栈空间先进后出，后进先出的特点。图中已经详细的表明了栈空间的存储原理。
 
@@ -139,7 +139,7 @@ console.log(person.name); // Jerry
 
 队列是一种先进先出（FIFO）的数据结构。正如排队过安检一样，排在队伍前面的人一定是最先过检的人，用以下的图示可以清楚的理解队列的原理：
 
-![img2.png](javascript-types/img2.png)
+![img2.png](/images/javascript-types/img2.png)
 
 ### 引用数据类型与堆内存
 
@@ -155,7 +155,7 @@ var a3 = null; // 原始变量
 var b = { m: 20 }; // 变量b存在于变量对象中，{m: 20} 作为对象存在于堆内存中
 var c = [1, 2, 3]; // 变量c存在于变量对象中，[1, 2, 3] 作为对象存在于堆内存中
 ```
-![img3.png](javascript-types/img3.png)
+![img3.png](/images/javascript-types/img3.png)
 
 因此当我们要访问堆内存中的引用数据类型时，实际上我们首先是从变量对象中获取了该对象的地址引用（或者地址指针），然后再从堆内存中取得我们需要的数据。
 
@@ -177,11 +177,11 @@ n.a = 15;
 // 这时m.a的值是多少
 ```
 在变量对象中的数据发生复制行为时，系统会自动为新的变量分配一个新值。var b = a执行之后，a与b虽然值都等于20，但是他们其实已经是相互独立互不影响的值了。具体如图。所以我们修改了b的值以后，a的值并不会发生变化。
-![img4.png](javascript-types/img4.png)
+![img4.png](/images/javascript-types/img4.png)
 在demo02中，我们通过var n = m执行一次复制引用类型的操作。引用类型的复制同样也会为新的变量自动分配一个新的值保存在变量对象中，但不同的是，这个新的值，仅仅只是引用类型的一个地址指针。当地址指针相同时，尽管他们相互独立，但是在变量对象中访问到的具体对象实际上是同一个。如图所示。
 
 因此当我改变n时，m也发生了变化。这就是引用类型的特性。
-![img5.png](javascript-types/img5.png)
+![img5.png](/images/javascript-types/img5.png)
 
 ## 拷贝
 
@@ -208,7 +208,7 @@ function shallowCopy(src) {
 
 因为浅拷贝只会将对象的各个属性进行依次拷贝，并不会进行递归拷贝，而 JavaScript 存储对象都是存地址的，所以浅拷贝会导致 obj.arr 和 shallowObj.arr 指向同一块内存地址，大概的示意图如下：
 
-![img6.png](javascript-types/img6.png)
+![img6.png](/images/javascript-types/img6.png)
 
 导致的结果就是：
 
@@ -226,6 +226,6 @@ var obj = { a:1, arr: [1,2] };
 var obj2 = deepCopy(obj);
 ```
 结果如下面的示意图所示：
-![img7.png](javascript-types/img7.jpg)
+![img7.png](/images/javascript-types/img7.jpg)
 
 需要注意的是，如果对象比较大，层级也比较多，深拷贝会带来性能上的问题。在遇到需要采用深拷贝的场景时，可以考虑有没有其他替代的方案。在实际的应用场景中，也是浅拷贝更为常用。

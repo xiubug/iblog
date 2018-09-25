@@ -18,11 +18,11 @@ $ git commit
 ```
 基本上，你写什么都行。
 
-![img1.png](git-commit-change-writing-guide/img1.png)
+![img1.png](/images/git-commit-change-writing-guide/img1.png)
 
 但是，一般来说，commit message 应该清晰明了，说明本次提交的目的。
 
-![img2.png](git-commit-change-writing-guide/img2.png)
+![img2.png](/images/git-commit-change-writing-guide/img2.png)
 
 目前，社区有多种 Commit message 的写法规范。本文介绍 Angular 规范，这是目前使用最广的写法，比较合理和系统化，并且有配套的工具。
 

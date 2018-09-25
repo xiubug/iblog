@@ -13,18 +13,18 @@ JavaScript中，相等运算符（==）是一个很让人头痛的运算符，�
 
 ## 抽象比较算法
 
-![img1.png](javascript-equality-operator/img1.png)
+![img1.png](/images/javascript-equality-operator/img1.png)
 
 在执行抽象相等比较算法的过程中，会发现会将xy操作数进行隐式类型转化的，这也是==运算符副作用的体现。
 
 ### ToPrimitive()
 
-![img2.png](javascript-equality-operator/img2.png)
+![img2.png](/images/javascript-equality-operator/img2.png)
 
 toPrimitive方法的目的就是将输入的参数转化成非对象类型。
 
 ### DefaultValue()
-![img3.png](javascript-equality-operator/img3.png)
+![img3.png](/images/javascript-equality-operator/img3.png)
 
 由于0的类型是数值，null的类型是 Null（这是规格4.3.13 小节的规定，是内部 Type 运算的结果，跟typeof运算符无关）。因此上面的前 11 步都得不到结果，要到第 12 步才能得到false。
 ``` js

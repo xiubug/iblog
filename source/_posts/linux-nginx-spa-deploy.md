@@ -78,7 +78,7 @@ server {
 **vue项目：**
 
 域名：`http://tb.sosout.com`
-![img1.png](linux-nginx-spa-deploy/img1.png)
+![img1.png](/images/linux-nginx-spa-deploy/img1.png)
 
 ``` jsx
 import App from '../App'
@@ -129,7 +129,7 @@ export default [{
 }]
 ```
 
-![img2.png](linux-nginx-spa-deploy/img2.png)
+![img2.png](/images/linux-nginx-spa-deploy/img2.png)
 
 ``` nginx
 ############
@@ -171,7 +171,7 @@ http {
 
 域名：`http://antd.sosout.com`
 
-![img3.png](linux-nginx-spa-deploy/img3.png)
+![img3.png](/images/linux-nginx-spa-deploy/img3.png)
 
 ``` js
 /**
@@ -314,7 +314,7 @@ const RouteConfig = (
 export default RouteConfig;
 ```
 
-![img4.png](linux-nginx-spa-deploy/img4.png)
+![img4.png](/images/linux-nginx-spa-deploy/img4.png)
 
 ``` nginx
 ############
