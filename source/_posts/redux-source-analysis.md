@@ -19,7 +19,7 @@ Redux 是可预测的状态管理框架，它很好的解决多交互，多数�
 
 正常的一个同步数据流为：view 层触发 actionCreator，actionCreator 通过 store.dispatch(action) 方法变更 reducer。但是面对多种多样的业务场景，同步数据流方式显然无法满足。对于改变reducer的异步数据操作，就需要用到中间件的概念，如图所示：
 
-![img1.png](redux-source-analysis/img1.jpeg)
+![img1.png](/images/redux-source-analysis/img1.jpeg)
 
 ### 源码结构
 Redux 的源码结构很简单，源码都在 src 目录下，其目录结构如下：

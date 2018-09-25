@@ -1051,7 +1051,7 @@ Portals 提供了一种很好的方法，将子节点渲染到父组件 DOM 层�
 **requestAnimationFrame：**在下一个动画帧调度执行高优先级函数。
 
 一般网页线程执行任务时会以帧的形式划分，大部分网页控制在30-60帧是不会影响用户体验的；在两个执行帧之间，主线程通常会有一小段空闲时间，requestIdleCallback可以在这个空闲期（Idle Period）调用空闲期回调（Idle Callback），执行一些任务。
-![img2.png](react-source-analysis/img2.png)
+![img2.png](/images/react-source-analysis/img2.png)
 
 而 Fiber 所做的就是需要分解渲染任务，根据优先级使用API调度，异步执行指定任务。低优先级任务由 requestIdleCallback 处理；高优先级任务，如动画相关的由 requestAnimationFrame 处理；requestIdleCallback 可以在多个空闲期调用空闲期回调，执行任务；requestIdleCallback 方法提供 deadline，即任务执行限制时间，以切分任务，避免长时间执行，阻塞UI渲染而导致掉帧；
 

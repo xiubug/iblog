@@ -202,7 +202,7 @@ $ pm2 start npm --name "my-nuxt" -- run build
 ```
 `使用pm2时，把两个部署命令合成一个更方便！`执行完pm2的启动命令后，我们用` pm2 list `查看一下进程列表，我截一下我个人服务器的pm2列表：
 
-![img1.png](linux-nginx-ssr-deploy/img1.png)
+![img1.png](/images/linux-nginx-ssr-deploy/img1.png)
 
 以后您就可以用pm2进行维护了，比如我们的next应用更改了代码，因为当时创建时给next应用命名的进程名称为` my-next `，因此我们可以直接使用` pm2 reload my-next `进行重载。接下来我就简单介绍一下pm2，如果有需要，我可以另写一篇关于pm2的文章！
 

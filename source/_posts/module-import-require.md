@@ -343,7 +343,7 @@ require.ensure([], (require) => {
 ```
 这是 babel6 的变更，在 babel5 的时候可不是这样的。
 
-![img1.jpeg](module-import-require/img1.jpeg)
+![img1.jpeg](/images/module-import-require/img1.jpeg)
 
 在 babel5 时代，大部分人在用 require 去引用 es6 输出的 default，只是把 default 输出看作是一个模块的默认输出，所以 babel5 对这个逻辑做了 hack，如果一个 es6 模块只有一个 default 输出，那么在转换成 commonjs 的时候也一起赋值给 module.exports，即整个导出对象被赋值了 default 所对应的值。
 

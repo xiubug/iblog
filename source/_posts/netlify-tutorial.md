@@ -36,4 +36,4 @@ React 源码 netlify 的配置文件 `netlify.toml`：
   status = 200
 ```
 
-![img1.png](netlify-tutorial/img1.png)
+![img1.png](/images/netlify-tutorial/img1.png)
