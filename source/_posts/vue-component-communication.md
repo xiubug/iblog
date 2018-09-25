@@ -6,7 +6,7 @@ categories:
   - vue
 date: 2018-09-25 15:27:06
 ---
-> 组件通讯包括：父子组件间的通信和兄弟组件间的通信。在组件化系统构建中，组件间通信必不可少的。
+> Vue 组件通信包括：父子组件和兄弟组件间的通信。在组件化系统构建中，组件间通信必不可少的。
 
 ### 父组件向子组件通信
 #### props
@@ -119,8 +119,40 @@ child.方法()
 
 ### Bus中央通信
 目前中央通信是解决兄弟间通信，祖父祖孙间通信的最佳方法，不仅限于此，也可以解决父组件子组件间的相互通信。如下图（盗图）：
-![img1.png](vue-component-communication/img1.png)
+![img1.png](/images/vue-component-communication/img1.png)
 
 各组件可自己定义好组件内接收外部组件的消息事件即可，不用理会是哪个组件发过来；而对于发送事件的组件，亦不用理会这个事件到底怎么发送给我需要发送的组件。
+
+**先设置Bus**：
+``` js
+// bus.js 
+import Vue from 'vue'
+export default new Vue();
+```
+**发送事件的组件：**
+``` js
+import bus from '@/bus';
+// 方法内执行下面动作
+bus.$emit('child-message', this.data);
+```
+**组件内监听事件：**
+``` js
+import bus from '@/bus';
+
+export default {
+  name: 'child',
+  methods: {
+  },
+  created() {
+    bus.$on('child-message', function(data) {
+      console.log('I get it');
+    });
+  }
+};
+```
+Bus中央通信的方案各种情况下都可用，比较方便。
+
+### 复杂的单页应用数据管理
+当应用足够复杂情况下，我们要使用vuex进行数据管理。
 
 
