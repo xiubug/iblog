@@ -965,7 +965,7 @@ function legacyRenderSubtreeIntoContainer(
   forceHydrate: boolean,
   callback: ?Function,
 ) {
-  // 检查提供的DOM节点是有效的节点元素
+  // TODO: 确保所有入口点都包含此检查
   invariant(
     isValidContainer(container),
     'Target container is not a DOM element.',
@@ -2318,7 +2318,7 @@ function legacyRenderSubtreeIntoContainer(
   forceHydrate: boolean,
   callback: ?Function,
 ) {
-  // TODO: Ensure all entry points contain this check
+  // TODO: 确保所有入口点都包含此检查
   invariant(
     isValidContainer(container),
     'Target container is not a DOM element.',
@@ -2333,8 +2333,7 @@ function legacyRenderSubtreeIntoContainer(
   let root: Root = (container._reactRootContainer: any);
   if (!root) {
     // 初次渲染时初始化
-    // 创建react根容器
-    // 缓存react根容器至DOM容器的reactRootContainer属性
+    // 创建react根容器，并缓存react根容器至DOM容器的reactRootContainer属性
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
