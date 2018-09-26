@@ -102,7 +102,7 @@ export default function createStore(reducer, preloadedState, enhancer) {
     if (typeof reducer !== 'function') {
         throw new Error('Expected the reducer to be a function.')
     }
-    // 储存当前的 currentReducer
+    // 储存当前的 reducer
     let currentReducer = reducer
     // 储存当前的状态
     let currentState = preloadedState
