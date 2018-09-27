@@ -895,6 +895,8 @@ console.log(renderer.toJSON());
 
 ### 首次渲染
 
+#### ReactDOM.render
+
 在 Web 项目中，如果要将应用渲染至页面，通常会有如下代码：
 
 ``` js
@@ -955,7 +957,10 @@ const ReactDOM: Object = {
   },
 };
 ```
-这里`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API，从字面可以看出它大致意思就是把虚拟的dom树渲染到真实的dom容器中，我们看下`legacyRenderSubtreeIntoContainer`源码实现，源码在`packages/react-dom/src/client/ReactDOM.js`中:
+这里`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。
+
+#### legacyRenderSubtreeIntoContainer
+`legacyRenderSubtreeIntoContainer`从字面可以看出它大致意思就是把虚拟的dom树渲染到真实的dom容器中，我们看下`legacyRenderSubtreeIntoContainer`源码实现，源码在`packages/react-dom/src/client/ReactDOM.js`中:
 ``` js
 // 渲染组件的子组件树至父容器
 function legacyRenderSubtreeIntoContainer(
@@ -1034,7 +1039,7 @@ function legacyRenderSubtreeIntoContainer(
 **DOMRenderer.unbatchedUpdates：**它的回调执行了挂载dom结构的方法。
 **root.legacy_renderSubtreeIntoContainer 和 root.render：**如果有`parentComponent`，就执行`root.render`否则执行`root.legacy_renderSubtreeIntoContainer`。
 
-#### DOMRenderer.createContainer创建root对象
+##### createContainer
 我们知道`root`是由`legacyCreateRootFromDOMContainer`生成的，我们找到`legacyCreateRootFromDOMContainer`函数，源码在`packages/react-dom/src/client/ReactDOM.js`中:
 ``` js
 function legacyCreateRootFromDOMContainer(
@@ -1289,7 +1294,44 @@ function FiberNode(
 * createFiberFromPortal：用于 createPortal
 * createFiberRoot：用于ReactDOM.render的根节点
 
-`createFiberRoot`就是创建了一个普通对象，里面`current`属性引用`fiber`对象，`containerInfo`属性引用`ReactDOM.render(<div/>, container)`的第二个参数，也就是一个元素节点，然后`fiber`对象的`stateNode`引用普通对象`root`。在React15中，`stateNode`应该是一个组件实例或真实DOM，最后返回普通对象`stateNode`。
+`createFiberRoot`就是创建了一个普通对象，里面`current`属性引用`fiber`对象，`containerInfo`属性引用`ReactDOM.render(<div/>, container)`的第二个参数，也就是一个元素节点，然后`fiber`对象的`stateNode`引用普通对象`root`。在React15中，`stateNode`应该是一个组件实例或真实DOM，最后返回普通对象`stateNode`。现在我们回顾下调用`reactDOM.render`传入的`container`，在执行过程中附加了很多有用的东西：
+``` js
+container = { // 就是我们传入的那个真实dom
+  _reactRootContainer: { // legacyCreateRootFromDOMContainer
+    _internalRoot: { // DOMRenderer.createContainer
+      current:{}  // new FiberNode
+    }
+  }
+} 
+```
+
+##### unbatchedUpdates
+`DOMRenderer.unbatchedUpdates`的回调执行了挂载dom结构的方法源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
+``` js
+// 正在批量更新标识
+let isBatchingUpdates: boolean = false;
+// 未批量更新标识
+let isUnbatchingUpdates: boolean = false;
+// 非批量更新操作
+function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
+  // 如果正在批量更新
+  if (isBatchingUpdates && !isUnbatchingUpdates) {
+    // 未批量更新设为true
+    isUnbatchingUpdates = true;
+    try {
+      // 运行入参函数且返回执行结果
+      return fn(a);
+    } finally {
+      // 仍旧将未批量更新设为false
+      isUnbatchingUpdates = false;
+    }
+  }
+  // 不管是否在批量更新流程中，都执行入参函数
+  return fn(a);
+}
+```
+由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。
+
 #### DOMRenderer.updateContainer
 从`legacyRenderSubtreeIntoContainer`函数里可以看出，无论怎样判断，最终都会到`root.legacy_renderSubtreeIntoContainer`和`root.render`两个方法，而这两个方法的核心就是`DOMRenderer.updateContainer`，无非就是传不传父组件这点区别。源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
 ``` typescript
@@ -1322,13 +1364,14 @@ export function updateContainerAtExpirationTime(
   callback: ?Function,
 ) {
   // TODO: If this is a nested container, this won't be the root.
+  // 引用fiber对象
   const current = container.current;
 
   if (__DEV__) {
     // ...
   }
 
-  // 获得上下文对象，决定它是叫context还是pendingContext
+  // 获得上下文对象
   const context = getContextForSubtree(parentComponent);
   if (container.context === null) {
     container.context = context;
@@ -1339,47 +1382,8 @@ export function updateContainerAtExpirationTime(
   return scheduleRootUpdate(current, element, expirationTime, callback);
 }
 
-// 安排根节点更新
-function scheduleRootUpdate(
-  current: Fiber, // fiber对象
-  element: ReactNodeList, // 虚拟dom树
-  expirationTime: ExpirationTime, // 更新优先级
-  callback: ?Function,
-) {
-  if (__DEV__) {
-    // ...
-  }
-  
-  // 返回一个包含以上属性的update对象
-  const update = createUpdate(expirationTime);
-  // Caution: React DevTools currently depends on this property
-  // being called "element".
-  // 将虚拟dom树放入payload 
-  update.payload = {element};
-
-  callback = callback === undefined ? null : callback;
-  if (callback !== null) {
-    warningWithoutStack(
-      typeof callback === 'function',
-      'render(...): Expected the last optional `callback` argument to be a ' +
-        'function. Instead received: %s.',
-      callback,
-    );
-    update.callback = callback;
-  }
-  // 开始进入更新队列
-  enqueueUpdate(current, update);
-
-  scheduleWork(current, expirationTime);
-  return expirationTime;
-}
-// 更新队列
-export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
-  // 根据fiber的指示进行更新
-}
-```
-接下来我们先看一看`getContextForSubtree`的实现：
-``` typescript
+// 源码在 packages\react-reconciler\src\ReactFiberReconciler.js 中
+// 获得上下文对象
 function getContextForSubtree(
   parentComponent: ?React$Component<any, any>,
 ): Object {
@@ -1405,46 +1409,281 @@ function getContextForSubtree(
   return parentContext;
 }
 ```
-因为一开始`parentComponent`是不存在的，于是返回一个空对象。注意，这个空对象是重复使用的，不是每次返回一个新的空对象，这是一个很好的优化。
-经过一层层的分析，最终指向了`enqueueUpdate`这个函数，而这个函数和fiber是紧密耦合的，fiber是一个棘手的问题，不理解fiber就无法弄清虚拟dom如何更新到真实dom中。
+`updateContainer`的源码很简单，就是通过`getContextForSubtree`（这里`getContextForSubtree`因为一开始`parentComponent`是不存在的，于是返回一个空对象。注意，这个空对象可以重复使用，不用每次返回一个新的空对象，这是一个很好的优化）获得上下文对象，最后丢给`scheduleRootUpdate`，我们找到`scheduleRootUpdate`，源码在`packages/react-reconciler/src/ReactFiberReconciler.js`中：
 
-#### DOMRenderer.unbatchedUpdates
-`DOMRenderer.unbatchedUpdates`的回调执行了挂载dom结构的方法源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
-``` js
-// 正在批量更新标识
-let isBatchingUpdates: boolean = false;
-// 未批量更新标识
-let isUnbatchingUpdates: boolean = false;
-// 非批量更新操作
-function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
-  // 如果正在批量更新
-  if (isBatchingUpdates && !isUnbatchingUpdates) {
-    // 未批量更新设为true
-    isUnbatchingUpdates = true;
-    try {
-      // 运行入参函数且返回执行结果
-      return fn(a);
-    } finally {
-      // 仍旧将未批量更新设为false
-      isUnbatchingUpdates = false;
-    }
+#### scheduleRootUpdate
+``` typescript
+// 进行根节点更新
+function scheduleRootUpdate(
+  current: Fiber, // 引用fiber对象
+  element: ReactNodeList, // 虚拟dom树
+  expirationTime: ExpirationTime, // 更新优先级
+  callback: ?Function,
+) {
+  if (__DEV__) {
+    // ...
   }
-  // 不管是否在批量更新流程中，都执行入参函数
-  return fn(a);
+  
+  // 返回一个包含以上属性的update对象
+  const update = createUpdate(expirationTime);
+  // Caution: React DevTools currently depends on this property
+  // being called "element".
+  // 将虚拟dom树放入payload 
+  update.payload = {element};
+
+  callback = callback === undefined ? null : callback;
+  if (callback !== null) {
+    warningWithoutStack(
+      typeof callback === 'function',
+      'render(...): Expected the last optional `callback` argument to be a ' +
+        'function. Instead received: %s.',
+      callback,
+    );
+    update.callback = callback;
+  }
+  // 开始队列更新
+  enqueueUpdate(current, update); 
+  // 执行队列
+  scheduleWork(current, expirationTime);
+  return expirationTime;
+}
+
+export function createUpdate(expirationTime: ExpirationTime): Update<*> {
+  return {
+    expirationTime: expirationTime,
+
+    tag: UpdateState,
+    payload: null,
+    callback: null,
+
+    next: null,
+    nextEffect: null,
+  };
 }
 ```
-由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。
-#### 小结
-当我们调用`ReactDOM.render`方法，传入例如`<App />`组件，React 开始运行，`react-dom`内部通过调用`DOMRenderer.createContainer`将`<App />`转化为`FiberRoot`对象，并缓存在一个全局变量中，通过调用`DOMRenderer.updateContainer`更新容器内容。此外，我们调用 reactDOM.render 传入的 container，在执行过程中也附加了许多有用的东西，现在来回顾一下：container 就是我们传入的那个真实dom。
-``` js
-container = {
-  _reactRootContainer: { // legacyCreateRootFromDOMContainer
-    _internalRoot: { // DOMRenderer.createContainer
-      current:{}  // new FiberNode
+`scheduleRootUpdate`是将用户的传参封装成一个`update`对象, `update`对象有`payload`对象，它就是相当于React15中 的setState的第一个state传参，但现在`payload`中把`children`也放进去了。然后开始队列更新：`enqueueUpdate(...)` 和执行队列：`scheduleWork(...)`，现在我们看找到`enqueueUpdate`，源码在`packages/react-reconciler/src/ReactUpdateQueue.js`中：
+##### enqueueUpdate
+``` typescript
+export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
+  // alternate 主要用来保存更新过程中各版本更新队列，方便崩溃或冲突时回退
+  const alternate = fiber.alternate;
+  // 创建两个独立的更新队列
+  let queue1;
+  let queue2;
+  if (alternate === null) {
+    // 只存在一个 fiber
+    queue1 = fiber.updateQueue;
+    queue2 = null;
+    if (queue1 === null) {
+      // 如果不存在，则创建一个更新队列
+      queue1 = fiber.updateQueue = createUpdateQueue(fiber.memoizedState);
+    }
+  } else {
+    // 两个所有者
+    queue1 = fiber.updateQueue;
+    queue2 = alternate.updateQueue;
+    if (queue1 === null) {
+      if (queue2 === null) {
+        // 如果两个都不存在，则创建两个新的
+        queue1 = fiber.updateQueue = createUpdateQueue(fiber.memoizedState);
+        queue2 = alternate.updateQueue = createUpdateQueue(
+          alternate.memoizedState,
+        );
+      } else {
+        // queue1 不存在，queue2 存在，queue1 根据 queue2 创建
+        queue1 = fiber.updateQueue = cloneUpdateQueue(queue2);
+      }
+    } else {
+      if (queue2 === null) {
+        // queue2 不存在，queue1 存在，queue2 根据 queue1 创建
+        queue2 = alternate.updateQueue = cloneUpdateQueue(queue1);
+      } else {
+        // 全都有
+      }
     }
   }
-} 
+  if (queue2 === null || queue1 === queue2) {
+    // 只存在一个更新队列
+    appendUpdateToQueue(queue1, update);
+  } else {
+    // 如果任意更新队列为空，则需要将更新添加至两个更新队列
+    if (queue1.lastUpdate === null || queue2.lastUpdate === null) {
+      appendUpdateToQueue(queue1, update);
+      appendUpdateToQueue(queue2, update);
+    } else {
+      // 如果2个更新队列均非空，则添加更新至第一个队列，并更新另一个队列的尾部更新项
+      appendUpdateToQueue(queue1, update);
+      queue2.lastUpdate = update;
+    }
+  }
+
+  if (__DEV__) {
+    if (
+      (fiber.tag === ClassComponent || fiber.tag === ClassComponentLazy) &&
+      (currentlyProcessingQueue === queue1 ||
+        (queue2 !== null && currentlyProcessingQueue === queue2)) &&
+      !didWarnUpdateInsideUpdate
+    ) {
+      warningWithoutStack(
+        false,
+        'An update (setState, replaceState, or forceUpdate) was scheduled ' +
+          'from inside an update function. Update functions should be pure, ' +
+          'with zero side-effects. Consider using componentDidUpdate or a ' +
+          'callback.',
+      );
+      didWarnUpdateInsideUpdate = true;
+    }
+  }
+}
+
+export function createUpdateQueue<State>(baseState: State): UpdateQueue<State> {
+  const queue: UpdateQueue<State> = {
+    baseState,
+    firstUpdate: null,
+    lastUpdate: null,
+    firstCapturedUpdate: null,
+    lastCapturedUpdate: null,
+    firstEffect: null,
+    lastEffect: null,
+    firstCapturedEffect: null,
+    lastCapturedEffect: null,
+  };
+  return queue;
+}
+
+function cloneUpdateQueue<State>(
+  currentQueue: UpdateQueue<State>,
+): UpdateQueue<State> {
+  const queue: UpdateQueue<State> = {
+    baseState: currentQueue.baseState,
+    firstUpdate: currentQueue.firstUpdate,
+    lastUpdate: currentQueue.lastUpdate,
+
+    // TODO: With resuming, if we bail out and resuse the child tree, we should
+    // keep these effects.
+    firstCapturedUpdate: null,
+    lastCapturedUpdate: null,
+
+    firstEffect: null,
+    lastEffect: null,
+
+    firstCapturedEffect: null,
+    lastCapturedEffect: null,
+  };
+  return queue;
+}
+
+function appendUpdateToQueue<State>(
+  queue: UpdateQueue<State>,
+  update: Update<State>,
+) {
+  // Append the update to the end of the list.
+  if (queue.lastUpdate === null) {
+    // Queue is empty
+    queue.firstUpdate = queue.lastUpdate = update;
+  } else {
+    queue.lastUpdate.next = update;
+    queue.lastUpdate = update;
+  }
+}
 ```
+这里`enqueueUpdate`是一个链表，然后根据`fiber`的状态创建一个或两个列队对象，接下来我们在看一下如何执行队列的，我们找到`scheduleWork`，源码在`packages/react-reconciler/src/ReactFiberScheduler.js`中：
+#### scheduleWork
+``` typescript
+function scheduleWork(fiber: Fiber, expirationTime: ExpirationTime) {
+  recordScheduleUpdate();
+
+  if (__DEV__) {
+    if (fiber.tag === ClassComponent || fiber.tag === ClassComponentLazy) {
+      const instance = fiber.stateNode;
+      warnAboutInvalidUpdates(instance);
+    }
+  }
+
+  const root = scheduleWorkToRoot(fiber, expirationTime);
+  if (root === null) {
+    if (
+      __DEV__ &&
+      (fiber.tag === ClassComponent || fiber.tag === ClassComponentLazy)
+    ) {
+      warnAboutUpdateOnUnmounted(fiber);
+    }
+    return;
+  }
+
+  if (enableSchedulerTracing) {
+    const interactions = __interactionsRef.current;
+    if (interactions.size > 0) {
+      const pendingInteractionMap = root.pendingInteractionMap;
+      const pendingInteractions = pendingInteractionMap.get(expirationTime);
+      if (pendingInteractions != null) {
+        interactions.forEach(interaction => {
+          if (!pendingInteractions.has(interaction)) {
+            // Update the pending async work count for previously unscheduled interaction.
+            interaction.__count++;
+          }
+
+          pendingInteractions.add(interaction);
+        });
+      } else {
+        pendingInteractionMap.set(expirationTime, new Set(interactions));
+
+        // Update the pending async work count for the current interactions.
+        interactions.forEach(interaction => {
+          interaction.__count++;
+        });
+      }
+
+      const subscriber = __subscriberRef.current;
+      if (subscriber !== null) {
+        const threadID = computeThreadID(
+          expirationTime,
+          root.interactionThreadID,
+        );
+        subscriber.onWorkScheduled(interactions, threadID);
+      }
+    }
+  }
+
+  if (
+    !isWorking &&
+    nextRenderExpirationTime !== NoWork &&
+    expirationTime < nextRenderExpirationTime
+  ) {
+    // This is an interruption. (Used for performance tracking.)
+    interruptedBy = fiber;
+    resetStack();
+  }
+  markPendingPriorityLevel(root, expirationTime);
+  if (
+    // If we're in the render phase, we don't need to schedule this root
+    // for an update, because we'll do it before we exit...
+    !isWorking ||
+    isCommitting ||
+    // ...unless this is a different root than the one we're rendering.
+    nextRoot !== root
+  ) {
+    const rootExpirationTime = root.expirationTime;
+    requestWork(root, rootExpirationTime);
+  }
+  if (nestedUpdateCount > NESTED_UPDATE_LIMIT) {
+    // Reset this back to zero so subsequent updates don't throw.
+    nestedUpdateCount = 0;
+    invariant(
+      false,
+      'Maximum update depth exceeded. This can happen when a ' +
+        'component repeatedly calls setState inside ' +
+        'componentWillUpdate or componentDidUpdate. React limits ' +
+        'the number of nested updates to prevent infinite loops.',
+    );
+  }
+}
+```
+这里`scheduleWork`主要进行虚拟DOM（fiber树）的更新。
+
+#### 小结
+至此首次渲染的执行流程为：
+`ReactDOM.render` => `legacyRenderSubtreeIntoContainer` => `DOMRenderer.updateContainer` => `scheduleRootUpdate` => `scheduleWork` =>
 
 ## 高级指南
 
