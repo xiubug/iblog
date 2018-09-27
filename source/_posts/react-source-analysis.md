@@ -895,7 +895,6 @@ console.log(renderer.toJSON());
 
 ### 首次渲染
 
-#### ReactDOM.render
 在 Web 项目中，如果要将应用渲染至页面，通常会有如下代码：
 
 ``` js
@@ -906,7 +905,7 @@ import App from './App'; // 应用根组件
 ReactDOM.render(<App />, document.getElementById('root')); // 应用挂载容器DOM
 ```
 
-`react-dom`是用于浏览器端渲染React应用的模块，通过`ReactDOM.render(component, mountNode)`对`自定义组件/原生DOM/字符串`进行挂载，[ReactDOM模块](https://github.com/facebook/react/blob/master/packages/react-dom/src/client/ReactDOM.js)源码在`packages/react-dom/src/client/ReactDOM.js`中，有三个类似的方法：
+`react-dom`是用于浏览器端渲染React应用的模块，通过`ReactDOM.render(component, mountNode)`对`自定义组件/原生DOM/字符串`进行挂载。在React16中，虽然也是通过JSX编译得到一个虚拟DOM对象，但对这些虚拟DOM对象的再加工则是经过翻天覆地的变化。我们需要追根溯底，看它是怎么一步步转换过来的。我们先找到`ReactDOM.render`，源码在`packages/react-dom/src/client/ReactDOM.js`中，有三个类似的方法：
 
 ``` js
 const ReactDOM: Object = {
@@ -921,6 +920,7 @@ const ReactDOM: Object = {
       callback,
     );
   },
+  // React15的重要API，逐渐退出舞台
   render(
     element: React$Element<any>,  // React元素，通常是项目根组件
     container: DOMContainer, // React应用挂载的DOM容器
@@ -955,20 +955,18 @@ const ReactDOM: Object = {
   },
 };
 ```
-这里`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。
-
-#### legacyRenderSubtreeIntoContainer
-`legacyRenderSubtreeIntoContainer`从字面可以看出大致意思就是说把虚拟的dom树渲染到真实的dom容器中，我们看下`legacyRenderSubtreeIntoContainer`源码实现，源码在`packages/react-dom/src/client/ReactDOM.js`中:
+这里`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API，从字面可以看出它大致意思就是把虚拟的dom树渲染到真实的dom容器中，我们看下`legacyRenderSubtreeIntoContainer`源码实现，源码在`packages/react-dom/src/client/ReactDOM.js`中:
 ``` js
 // 渲染组件的子组件树至父容器
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
   children: ReactNodeList, // element 虚拟dom树
-  container: DOMContainer,
+  container: DOMContainer, // html中的dom根对象
   forceHydrate: boolean, // 服务器端渲染标识
-  callback: ?Function,
+  callback: ?Function, // 回调函数 
 ) {
   // TODO: 确保所有入口点都包含此检查
+  // 对 container 进行校验
   invariant(
     isValidContainer(container),
     'Target container is not a DOM element.',
@@ -979,11 +977,10 @@ function legacyRenderSubtreeIntoContainer(
     topLevelUpdateWarnings(container);
   }
 
-  // TODO: Without `any` type, Flow says "Property cannot be accessed on any
-  // member of intersection type." Whyyyyyy.
+  // 获取 root 对象
   let root: Root = (container._reactRootContainer: any);
   if (!root) { // 初次渲染时初始化
-    // 创建react根容器，并缓存react根容器至DOM容器的reactRootContainer属性
+    // 创建一个 FiberRoot对象 并将它缓存到DOM容器的reactRootContainer属性
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
@@ -998,8 +995,8 @@ function legacyRenderSubtreeIntoContainer(
     // 初始化容器相关
     // Initial mount should not be batched.
     DOMRenderer.unbatchedUpdates(() => {
-      // 对newRoot对象进行更新
       if (parentComponent != null) {
+        // 向真实dom中挂载虚拟dom
         root.legacy_renderSubtreeIntoContainer(
           parentComponent,
           children,
@@ -1010,7 +1007,6 @@ function legacyRenderSubtreeIntoContainer(
       }
     });
   } else {
-    // 如果不是初次渲染则直接更新容器
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
@@ -1018,7 +1014,6 @@ function legacyRenderSubtreeIntoContainer(
         originalCallback.call(instance);
       };
     }
-    // 对root对象进行更新
     if (parentComponent != null) {
       root.legacy_renderSubtreeIntoContainer(
         parentComponent,
@@ -1038,9 +1033,9 @@ function legacyRenderSubtreeIntoContainer(
 **_reactRootContainer：**由`legacyCreateRootFromDOMContainer`生成，该函数会生成一个`FiberRoot`对象挂载到真实的dom根节点上，有了这个对象，执行该对象上的一些方法可以将虚拟dom变成dom树挂载到根节点上。
 **DOMRenderer.unbatchedUpdates：**它的回调执行了挂载dom结构的方法。
 **root.legacy_renderSubtreeIntoContainer 和 root.render：**如果有`parentComponent`，就执行`root.render`否则执行`root.legacy_renderSubtreeIntoContainer`。
-接下来我们一一看看这几个步骤：
-##### _reactRootContainer
-我们知道`_reactRootContainer`是由`legacyCreateRootFromDOMContainer`创建，我们找到`legacyCreateRootFromDOMContainer`函数，源码在`packages/react-dom/src/client/ReactDOM.js`中:
+
+#### DOMRenderer.createContainer创建root对象
+我们知道`root`是由`legacyCreateRootFromDOMContainer`生成的，我们找到`legacyCreateRootFromDOMContainer`函数，源码在`packages/react-dom/src/client/ReactDOM.js`中:
 ``` js
 function legacyCreateRootFromDOMContainer(
   container: DOMContainer,
@@ -1068,11 +1063,10 @@ function legacyCreateRootFromDOMContainer(
   return new ReactRoot(container, isAsync, shouldHydrate);
 }
 ```
-我们发现实际上该函数做的只是在非ssr的情况下，将dom根节点清空，最后返回一个`new ReactRoot(...)`。接下来我们再看看`ReactRoot`：
+我们发现该函数实际上返回的是由构造函数`ReactRoot`创建的对象。其中如果在非ssr的情况下，将dom根节点清空。我们找到构造函数`ReactRoot`，源码在`packages\react-dom\src\client\ReactDOM.js`中：
 ``` js
 // 构造函数
 function ReactRoot(container: Container, isAsync: boolean, hydrate: boolean) {
-  // 这里 DOMRenderer.createContainer实际上调用了 createFiberRoot(containerInfo, isAsync, hydrate); 这样 root 就和fiber有了联系
   const root = DOMRenderer.createContainer(container, isAsync, hydrate);
   this._internalRoot = root;
 }
@@ -1122,43 +1116,190 @@ ReactRoot.prototype.createBatch = function(): Batch {
   // ...
 };
 ```
-由以上代码我们就了解到`root`是一个`FiberRoot`对象，它有render、unmount、legacy_renderSubtreeIntoContainer等原型方法外，同时还声明了一个和fiber相关的`_internalRoot`属性。不管是`root.render`还是`root.legacy_renderSubtreeIntoContainer`都会去执行`DOMRenderer.updateContainer`方法，无非就是第三个参数传什么而已。
-
-##### DOMRenderer.unbatchedUpdates
-`DOMRenderer.unbatchedUpdates`的回调执行了挂载dom结构的方法源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
+可以看出构造函数`ReactRoot`有render、unmount、legacy_renderSubtreeIntoContainer等原型方法外，同时还声明了一个和fiber相关的`_internalRoot`属性。其中`render`和`legacy_renderSubtreeIntoContainer`原型方法都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。`_internalRoot`是由`DOMRenderer.createContainer`生成的。我们找到`DOMRenderer.createContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
 ``` js
-// 正在批量更新标识
-let isBatchingUpdates: boolean = false;
-// 未批量更新标识
-let isUnbatchingUpdates: boolean = false;
-// 非批量更新操作
-function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
-  // 如果正在批量更新
-  if (isBatchingUpdates && !isUnbatchingUpdates) {
-    // 未批量更新设为true
-    isUnbatchingUpdates = true;
-    try {
-      // 运行入参函数且返回执行结果
-      return fn(a);
-    } finally {
-      // 仍旧将未批量更新设为false
-      isUnbatchingUpdates = false;
-    }
-  }
-  // 不管是否在批量更新流程中，都执行入参函数
-  return fn(a);
+// containerInfo就是ReactDOM.render(<div/>, container)的第二个参数，换言之是一个元素节点
+export function createContainer(
+  containerInfo: Container,
+  isAsync: boolean,
+  hydrate: boolean,
+): OpaqueRoot {
+  return createFiberRoot(containerInfo, isAsync, hydrate);
 }
 ```
-由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。
-##### root.legacy_renderSubtreeIntoContainer 和 root.render
+接下来我们看看`createFiberRoot`是怎么将一个真实DOM变成一个Fiber对象：
+``` typescript
+// 源码在 packages\react-reconciler\src\ReactFiberReconciler.js 中
+export function createFiberRoot(
+  containerInfo: any,
+  isAsync: boolean,
+  hydrate: boolean,
+): FiberRoot {
+  const uninitializedFiber = createHostRootFiber(isAsync);
+
+  let root;
+  if (enableSchedulerTracing) {
+    root = ({
+      current: uninitializedFiber,
+      containerInfo: containerInfo,
+      pendingChildren: null,
+
+      earliestPendingTime: NoWork,
+      latestPendingTime: NoWork,
+      earliestSuspendedTime: NoWork,
+      latestSuspendedTime: NoWork,
+      latestPingedTime: NoWork,
+
+      didError: false,
+
+      pendingCommitExpirationTime: NoWork,
+      finishedWork: null,
+      timeoutHandle: noTimeout,
+      context: null,
+      pendingContext: null,
+      hydrate,
+      nextExpirationTimeToWorkOn: NoWork,
+      expirationTime: NoWork,
+      firstBatch: null,
+      nextScheduledRoot: null,
+
+      interactionThreadID: unstable_getThreadID(),
+      memoizedInteractions: new Set(),
+      pendingInteractionMap: new Map(),
+    }: FiberRoot);
+  } else {
+    root = ({
+      current: uninitializedFiber,
+      containerInfo: containerInfo,
+      pendingChildren: null,
+
+      earliestPendingTime: NoWork,
+      latestPendingTime: NoWork,
+      earliestSuspendedTime: NoWork,
+      latestSuspendedTime: NoWork,
+      latestPingedTime: NoWork,
+
+      didError: false,
+
+      pendingCommitExpirationTime: NoWork,
+      finishedWork: null,
+      timeoutHandle: noTimeout,
+      context: null,
+      pendingContext: null,
+      hydrate,
+      nextExpirationTimeToWorkOn: NoWork,
+      expirationTime: NoWork,
+      firstBatch: null,
+      nextScheduledRoot: null,
+    }: BaseFiberRootProperties);
+  }
+  uninitializedFiber.stateNode = root;
+  return ((root: any): FiberRoot);
+}
+
+// 源码在 packages\react-reconciler\src\ReactFiber.js 中
+export function createHostRootFiber(isAsync: boolean): Fiber {
+  let mode = isAsync ? AsyncMode | StrictMode : NoContext;
+
+  if (enableProfilerTimer && isDevToolsPresent) {
+    // Always collect profile timings when DevTools are present.
+    // This enables DevTools to start capturing timing at any point–
+    // Without some nodes in the tree having empty base times.
+    mode |= ProfileMode;
+  }
+
+  return createFiber(HostRoot, null, null, mode);
+}
+
+// 源码在 packages\react-reconciler\src\ReactFiber.js 中
+const createFiber = function(
+  tag: WorkTag,
+  pendingProps: mixed,
+  key: null | string,
+  mode: TypeOfMode,
+): Fiber {
+  // $FlowFixMe: the shapes are exact here but Flow doesn't like constructors
+  return new FiberNode(tag, pendingProps, key, mode);
+};
+
+// 源码在 packages\react-reconciler\src\ReactFiber.js 中
+function FiberNode(
+  tag: WorkTag,
+  pendingProps: mixed,
+  key: null | string,
+  mode: TypeOfMode,
+) {
+  // Instance
+  this.tag = tag;
+  this.key = key;
+  this.type = null;
+  this.stateNode = null;
+
+  // Fiber
+  this.return = null;
+  this.child = null;
+  this.sibling = null;
+  this.index = 0;
+
+  this.ref = null;
+
+  this.pendingProps = pendingProps;
+  this.memoizedProps = null;
+  this.updateQueue = null;
+  this.memoizedState = null;
+  this.firstContextDependency = null;
+
+  this.mode = mode;
+
+  // Effects
+  this.effectTag = NoEffect;
+  this.nextEffect = null;
+
+  this.firstEffect = null;
+  this.lastEffect = null;
+
+  this.expirationTime = NoWork;
+  this.childExpirationTime = NoWork;
+
+  this.alternate = null;
+
+  if (enableProfilerTimer) {
+    this.actualDuration = 0;
+    this.actualStartTime = -1;
+    this.selfBaseDuration = 0;
+    this.treeBaseDuration = 0;
+  }
+
+  if (__DEV__) {
+    this._debugID = debugCounter++;
+    this._debugSource = null;
+    this._debugOwner = null;
+    this._debugIsCurrentlyTiming = false;
+    if (!hasBadMapPolyfill && typeof Object.preventExtensions === 'function') {
+      Object.preventExtensions(this);
+    }
+  }
+}
+```
+由此可知，所有`Fiber`对象都是`FiberNode`的实例，它有许多种类型，通过tag来标识。
+内部有许多方法来生成Fiber对象：
+* createFiberFromElement：type为类，无状态函数，元素标签名
+* createFiberFromFragment：type为React.Fragment
+* createFiberFromText：在JSX中表现为字符串，数字
+* createFiberFromPortal：用于 createPortal
+* createFiberRoot：用于ReactDOM.render的根节点
+
+`createFiberRoot`就是创建了一个普通对象，里面`current`属性引用`fiber`对象，`containerInfo`属性引用`ReactDOM.render(<div/>, container)`的第二个参数，也就是一个元素节点，然后`fiber`对象的`stateNode`引用普通对象`root`。在React15中，`stateNode`应该是一个组件实例或真实DOM，最后返回普通对象`stateNode`。
+#### DOMRenderer.updateContainer
 从`legacyRenderSubtreeIntoContainer`函数里可以看出，无论怎样判断，最终都会到`root.legacy_renderSubtreeIntoContainer`和`root.render`两个方法，而这两个方法的核心就是`DOMRenderer.updateContainer`，无非就是传不传父组件这点区别。源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
-``` js
+``` typescript
 export function updateContainer(
-  element: ReactNodeList, // 虚拟dom对象
-  container: OpaqueRoot, // fiberRoot 对象
-  parentComponent: ?React$Component<any, any>,
+  element: ReactNodeList, // ReactDOM的第一个参数，通常表示一个数组，现在它泛指各种虚拟DOM了
+  container: OpaqueRoot, // ReactDOM.render(<div/>, container)的第二个参数，换言之是一个元素节点
+  parentComponent: ?React$Component<any, any>, // parentComponent为之前的根组件，现在它为null
   callback: ?Function,
 ): ExpirationTime {
+  // createFiberRoot中创建的fiber对象
   const current = container.current;
   const currentTime = requestCurrentTime();
   // 计算优先级
@@ -1174,9 +1315,9 @@ export function updateContainer(
 
 // 根据渲染优先级更新dom
 export function updateContainerAtExpirationTime(
-  element: ReactNodeList, // 虚拟dom对象
-  container: OpaqueRoot, // 和fiber相关的_internalRoot
-  parentComponent: ?React$Component<any, any>,  // 可有可无
+  element: ReactNodeList, // ReactDOM的第一个参数，通常表示一个数组，现在它泛指各种虚拟DOM了
+  container: OpaqueRoot, // ReactDOM.render(<div/>, container)的第二个参数，换言之是一个元素节点
+  parentComponent: ?React$Component<any, any>,   // parentComponent为之前的根组件，现在它为null
   expirationTime: ExpirationTime, // 计算出来的渲染优先级
   callback: ?Function,
 ) {
@@ -1187,7 +1328,7 @@ export function updateContainerAtExpirationTime(
     // ...
   }
 
-  // 获取到父组件内容
+  // 获得上下文对象，决定它是叫context还是pendingContext
   const context = getContextForSubtree(parentComponent);
   if (container.context === null) {
     container.context = context;
@@ -1237,9 +1378,73 @@ export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
   // 根据fiber的指示进行更新
 }
 ```
+接下来我们先看一看`getContextForSubtree`的实现：
+``` typescript
+function getContextForSubtree(
+  parentComponent: ?React$Component<any, any>,
+): Object {
+  if (!parentComponent) {
+    return emptyContextObject;
+  }
+
+  const fiber = ReactInstanceMap.get(parentComponent);
+  const parentContext = findCurrentUnmaskedContext(fiber);
+
+  if (fiber.tag === ClassComponent) {
+    const Component = fiber.type;
+    if (isLegacyContextProvider(Component)) {
+      return processChildContext(fiber, Component, parentContext);
+    }
+  } else if (fiber.tag === ClassComponentLazy) {
+    const Component = getResultFromResolvedThenable(fiber.type);
+    if (isLegacyContextProvider(Component)) {
+      return processChildContext(fiber, Component, parentContext);
+    }
+  }
+
+  return parentContext;
+}
+```
+因为一开始`parentComponent`是不存在的，于是返回一个空对象。注意，这个空对象是重复使用的，不是每次返回一个新的空对象，这是一个很好的优化。
 经过一层层的分析，最终指向了`enqueueUpdate`这个函数，而这个函数和fiber是紧密耦合的，fiber是一个棘手的问题，不理解fiber就无法弄清虚拟dom如何更新到真实dom中。
+
+#### DOMRenderer.unbatchedUpdates
+`DOMRenderer.unbatchedUpdates`的回调执行了挂载dom结构的方法源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
+``` js
+// 正在批量更新标识
+let isBatchingUpdates: boolean = false;
+// 未批量更新标识
+let isUnbatchingUpdates: boolean = false;
+// 非批量更新操作
+function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
+  // 如果正在批量更新
+  if (isBatchingUpdates && !isUnbatchingUpdates) {
+    // 未批量更新设为true
+    isUnbatchingUpdates = true;
+    try {
+      // 运行入参函数且返回执行结果
+      return fn(a);
+    } finally {
+      // 仍旧将未批量更新设为false
+      isUnbatchingUpdates = false;
+    }
+  }
+  // 不管是否在批量更新流程中，都执行入参函数
+  return fn(a);
+}
+```
+由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。
 #### 小结
-由上可知，当我们调用`ReactDOM.render`方法，传入例如`<App />`组件，React 开始运行，`react-dom`内部通过调用`DOMRenderer.createContainer`将`<App />`转化为`FiberRoot`对象，并缓存在一个全局变量中，通过调用`DOMRenderer.updateContainer`更新容器内容。
+当我们调用`ReactDOM.render`方法，传入例如`<App />`组件，React 开始运行，`react-dom`内部通过调用`DOMRenderer.createContainer`将`<App />`转化为`FiberRoot`对象，并缓存在一个全局变量中，通过调用`DOMRenderer.updateContainer`更新容器内容。此外，我们调用 reactDOM.render 传入的 container，在执行过程中也附加了许多有用的东西，现在来回顾一下：container 就是我们传入的那个真实dom。
+``` js
+container = {
+  _reactRootContainer: { // legacyCreateRootFromDOMContainer
+    _internalRoot: { // DOMRenderer.createContainer
+      current:{}  // new FiberNode
+    }
+  }
+} 
+```
 
 ## 高级指南
 
