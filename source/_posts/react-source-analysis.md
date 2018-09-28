@@ -907,9 +907,9 @@ import App from './App'; // 应用根组件
 ReactDOM.render(<App />, document.getElementById('root')); // 应用挂载容器DOM
 ```
 
-`react-dom`是用于浏览器端渲染React应用的模块，通过`ReactDOM.render(component, mountNode)`对`自定义组件/原生DOM/字符串`进行挂载。在React16中，虽然也是通过JSX编译得到一个虚拟DOM对象，但对这些虚拟DOM对象的再加工则是经过翻天覆地的变化。我们需要追根溯底，看它是怎么一步步转换过来的。我们先找到`ReactDOM.render`，源码在`packages/react-dom/src/client/ReactDOM.js`中，有三个类似的方法：
+这里`react-dom`是用于浏览器端渲染React应用的模块，通过`ReactDOM.render(component, mountNode)`可以对`自定义组件/原生DOM/字符串`进行挂载。在React16中，虽然也是通过JSX编译得到一个虚拟DOM对象，但对这些虚拟DOM对象的再加工则是经过翻天覆地的变化。我们需要追根溯底，看它是怎么一步步转换的。我们首先找到`ReactDOM.render`，源码在`packages/react-dom/src/client/ReactDOM.js`中，有三个类似的方法：
 
-``` js
+``` typescript
 const ReactDOM: Object = {
   // 新API，未来代替render
   hydrate(element: React$Node, container: DOMContainer, callback: ?Function) {
@@ -960,8 +960,8 @@ const ReactDOM: Object = {
 这里`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。
 
 #### legacyRenderSubtreeIntoContainer
-`legacyRenderSubtreeIntoContainer`从字面可以看出它大致意思就是把虚拟的dom树渲染到真实的dom容器中，我们看下`legacyRenderSubtreeIntoContainer`源码实现，源码在`packages/react-dom/src/client/ReactDOM.js`中:
-``` js
+`legacyRenderSubtreeIntoContainer`从字面可以看出它大致意思就是把虚拟的dom树渲染到真实的dom容器中，我们找到`legacyRenderSubtreeIntoContainer`方法，源码在`packages/react-dom/src/client/ReactDOM.js`中：
+``` typescript
 // 渲染组件的子组件树至父容器
 function legacyRenderSubtreeIntoContainer(
   parentComponent: ?React$Component<any, any>,
@@ -1034,14 +1034,14 @@ function legacyRenderSubtreeIntoContainer(
 }
 
 ```
-由此可见，当我们调用`ReactDOM.render`方法，主要执行了以下几个操作：
-**_reactRootContainer：**由`legacyCreateRootFromDOMContainer`生成，该函数会生成一个`FiberRoot`对象挂载到真实的dom根节点上，有了这个对象，执行该对象上的一些方法可以将虚拟dom变成dom树挂载到根节点上。
-**DOMRenderer.unbatchedUpdates：**它的回调执行了挂载dom结构的方法。
+由此可见，`legacyRenderSubtreeIntoContainer`主要执行了以下几个操作：
+**root：**由`legacyCreateRootFromDOMContainer`生成，该函数会生成一个`FiberRoot`对象挂载到真实的dom根节点上，有了这个对象，执行该对象上的一些方法可以将虚拟dom变成dom树挂载到根节点上。
+**DOMRenderer.unbatchedUpdates：**`DOMRenderer.unbatchedUpdates`的回调执行`root.legacy_renderSubtreeIntoContainer`或`root.render`。
 **root.legacy_renderSubtreeIntoContainer 和 root.render：**如果有`parentComponent`，就执行`root.render`否则执行`root.legacy_renderSubtreeIntoContainer`。
 
-##### createContainer
+##### root
 我们知道`root`是由`legacyCreateRootFromDOMContainer`生成的，我们找到`legacyCreateRootFromDOMContainer`函数，源码在`packages/react-dom/src/client/ReactDOM.js`中:
-``` js
+``` typescript
 function legacyCreateRootFromDOMContainer(
   container: DOMContainer,
   forceHydrate: boolean,
@@ -1121,7 +1121,42 @@ ReactRoot.prototype.createBatch = function(): Batch {
   // ...
 };
 ```
-可以看出构造函数`ReactRoot`有render、unmount、legacy_renderSubtreeIntoContainer等原型方法外，同时还声明了一个和fiber相关的`_internalRoot`属性。其中`render`和`legacy_renderSubtreeIntoContainer`原型方法都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。`_internalRoot`是由`DOMRenderer.createContainer`生成的。我们找到`DOMRenderer.createContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
+可以看出构造函数`ReactRoot`有render、unmount、legacy_renderSubtreeIntoContainer等原型方法外，同时还声明了一个和fiber相关的`_internalRoot`属性。其中`render`和`legacy_renderSubtreeIntoContainer`原型方法都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。`_internalRoot`是由`DOMRenderer.createContainer`生成的。这里`DOMRenderer.createContainer`是调和算法里面的操作，我们稍后介绍。
+
+##### unbatchedUpdates
+我们找到`DOMRenderer.unbatchedUpdates`，源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
+``` js
+// 正在批量更新标识
+let isBatchingUpdates: boolean = false;
+// 未批量更新标识
+let isUnbatchingUpdates: boolean = false;
+// 非批量更新操作
+function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
+  // 如果正在批量更新
+  if (isBatchingUpdates && !isUnbatchingUpdates) {
+    // 未批量更新设为true
+    isUnbatchingUpdates = true;
+    try {
+      // 运行入参函数且返回执行结果
+      return fn(a);
+    } finally {
+      // 仍旧将未批量更新设为false
+      isUnbatchingUpdates = false;
+    }
+  }
+  // 不管是否在批量更新流程中，都执行入参函数
+  return fn(a);
+}
+```
+由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。`DOMRenderer.unbatchedUpdates`的回调执行`root.legacy_renderSubtreeIntoContainer`或`root.render`，不管是`root.render`还是`root.legacy_renderSubtreeIntoContainer`都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。这里`DOMRenderer.updateContainer`是调和算法里面的操作，我们也稍后介绍。
+
+##### root.legacy_renderSubtreeIntoContainer 和 root.render
+不管是`root.render`还是`root.legacy_renderSubtreeIntoContainer`都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。这里`DOMRenderer.updateContainer`是调和算法里面的操作，我们也稍后介绍。
+
+#### 进行调和算法
+
+##### createContainer
+由上可知，`root._internalRoot`实际上是由`DOMRenderer.createContainer`创建的，我们找到`DOMRenderer.createContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
 ``` js
 // containerInfo就是ReactDOM.render(<div/>, container)的第二个参数，换言之是一个元素节点
 export function createContainer(
@@ -1132,9 +1167,8 @@ export function createContainer(
   return createFiberRoot(containerInfo, isAsync, hydrate);
 }
 ```
-接下来我们看看`createFiberRoot`是怎么将一个真实DOM变成一个Fiber对象：
+接下来我们看看`createFiberRoot`是怎么将一个真实DOM变成一个Fiber对象，我们找到`createFiberRoot`，源码在 packages\react-reconciler\src\ReactFiberReconciler.js 中：
 ``` typescript
-// 源码在 packages\react-reconciler\src\ReactFiberReconciler.js 中
 export function createFiberRoot(
   containerInfo: any,
   isAsync: boolean,
@@ -1286,7 +1320,7 @@ function FiberNode(
   }
 }
 ```
-由此可知，所有`Fiber`对象都是`FiberNode`的实例，它有许多种类型，通过tag来标识。
+由此可知，`react-dom`渲染模块调用`createContainer`创建容器、根fiber实例、FiberRoot对象等。所有`Fiber`对象都是`FiberNode`的实例，它有许多种类型，通过tag来标识。
 内部有许多方法来生成Fiber对象：
 * createFiberFromElement：type为类，无状态函数，元素标签名
 * createFiberFromFragment：type为React.Fragment
@@ -1294,7 +1328,7 @@ function FiberNode(
 * createFiberFromPortal：用于 createPortal
 * createFiberRoot：用于ReactDOM.render的根节点
 
-`createFiberRoot`就是创建了一个普通对象，里面`current`属性引用`fiber`对象，`containerInfo`属性引用`ReactDOM.render(<div/>, container)`的第二个参数，也就是一个元素节点，然后`fiber`对象的`stateNode`引用普通对象`root`。在React15中，`stateNode`应该是一个组件实例或真实DOM，最后返回普通对象`stateNode`。现在我们回顾下调用`reactDOM.render`传入的`container`，在执行过程中附加了很多有用的东西：
+`createFiberRoot`就是创建了一个普通对象，里面`current`属性引用`fiber`对象，`containerInfo`属性引用`ReactDOM.render(<div/>, container)`的第二个参数，也就是一个元素节点，然后`fiber`对象的`stateNode`引用普通对象`root`。在React15中，`stateNode`应该是一个组件实例或真实DOM，最后返回普通对象`stateNode`。现在我们回顾下调用`reactDOM.render`传入的`container`，在执行过程中附加了哪些有用的东西：
 ``` js
 container = { // 就是我们传入的那个真实dom
   _reactRootContainer: { // legacyCreateRootFromDOMContainer
@@ -1305,35 +1339,8 @@ container = { // 就是我们传入的那个真实dom
 } 
 ```
 
-##### unbatchedUpdates
-`DOMRenderer.unbatchedUpdates`的回调执行了挂载dom结构的方法源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
-``` js
-// 正在批量更新标识
-let isBatchingUpdates: boolean = false;
-// 未批量更新标识
-let isUnbatchingUpdates: boolean = false;
-// 非批量更新操作
-function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
-  // 如果正在批量更新
-  if (isBatchingUpdates && !isUnbatchingUpdates) {
-    // 未批量更新设为true
-    isUnbatchingUpdates = true;
-    try {
-      // 运行入参函数且返回执行结果
-      return fn(a);
-    } finally {
-      // 仍旧将未批量更新设为false
-      isUnbatchingUpdates = false;
-    }
-  }
-  // 不管是否在批量更新流程中，都执行入参函数
-  return fn(a);
-}
-```
-由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。
-
 #### DOMRenderer.updateContainer
-从`legacyRenderSubtreeIntoContainer`函数里可以看出，无论怎样判断，最终都会到`root.legacy_renderSubtreeIntoContainer`和`root.render`两个方法，而这两个方法的核心就是`DOMRenderer.updateContainer`，无非就是传不传父组件这点区别。源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
+从`legacyRenderSubtreeIntoContainer`函数里可以看出，无论怎样判断，最终都会到`root.legacy_renderSubtreeIntoContainer`和`root.render`两个方法，而这两个方法的核心就是`DOMRenderer.updateContainer`，无非就是传不传父组件这点区别。我们找到`DOMRenderer.updateContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
 ``` typescript
 export function updateContainer(
   element: ReactNodeList, // ReactDOM的第一个参数，通常表示一个数组，现在它泛指各种虚拟DOM了
@@ -1353,6 +1360,53 @@ export function updateContainer(
     expirationTime,
     callback,
   );
+}
+
+function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
+  let expirationTime;
+  if (expirationContext !== NoWork) {
+    // An explicit expiration context was set;
+    expirationTime = expirationContext;
+  } else if (isWorking) {
+    if (isCommitting) {
+      // Updates that occur during the commit phase should have sync priority
+      // by default.
+      expirationTime = Sync;
+    } else {
+      // Updates during the render phase should expire at the same time as
+      // the work that is being rendered.
+      expirationTime = nextRenderExpirationTime;
+    }
+  } else {
+    // No explicit expiration context was set, and we're not currently
+    // performing work. Calculate a new expiration time.
+    if (fiber.mode & AsyncMode) {
+      if (isBatchingInteractiveUpdates) {
+        // This is an interactive update
+        expirationTime = computeInteractiveExpiration(currentTime);
+      } else {
+        // This is an async update
+        expirationTime = computeAsyncExpiration(currentTime);
+      }
+      // If we're in the middle of rendering a tree, do not update at the same
+      // expiration time that is already rendering.
+      if (nextRoot !== null && expirationTime === nextRenderExpirationTime) {
+        expirationTime += 1;
+      }
+    } else {
+      // This is a sync update
+      expirationTime = Sync;
+    }
+  }
+  if (isBatchingInteractiveUpdates) {
+    // This is an interactive update. Keep track of the lowest pending
+    // interactive expiration time. This allows us to synchronously flush
+    // all interactive updates when needed.
+    if (expirationTime > lowestPriorityPendingInteractiveExpirationTime) {
+      lowestPriorityPendingInteractiveExpirationTime = expirationTime;
+    }
+  }
+  return expirationTime;
 }
 
 // 根据渲染优先级更新dom
@@ -1409,7 +1463,7 @@ function getContextForSubtree(
   return parentContext;
 }
 ```
-`updateContainer`的源码很简单，就是通过`getContextForSubtree`（这里`getContextForSubtree`因为一开始`parentComponent`是不存在的，于是返回一个空对象。注意，这个空对象可以重复使用，不用每次返回一个新的空对象，这是一个很好的优化）获得上下文对象，最后丢给`scheduleRootUpdate`，我们找到`scheduleRootUpdate`，源码在`packages/react-reconciler/src/ReactFiberReconciler.js`中：
+`updateContainer`的源码很简单，通过`computeExpirationForFiber`获得计算优先级，然后丢给`updateContainerAtExpirationTime`，`updateContainerAtExpirationTime`相当于什么都没做，通过`getContextForSubtree`（这里`getContextForSubtree`因为一开始`parentComponent`是不存在的，于是返回一个空对象。注意，这个空对象可以重复使用，不用每次返回一个新的空对象，这是一个很好的优化）获得上下文对象，然后分配给`container.context`或`container.pendingContext`，最后丢给`scheduleRootUpdate`，我们找到`scheduleRootUpdate`，源码在`packages/react-reconciler/src/ReactFiberReconciler.js`中：
 
 #### scheduleRootUpdate
 ``` typescript
@@ -1678,12 +1732,561 @@ function scheduleWork(fiber: Fiber, expirationTime: ExpirationTime) {
     );
   }
 }
+
+function scheduleWorkToRoot(fiber: Fiber, expirationTime): FiberRoot | null {
+  // 更新 fiber实例的过期时间
+  if (
+    fiber.expirationTime === NoWork ||
+    fiber.expirationTime > expirationTime
+  ) {
+    // 若fiber实例到期时间大于期望的任务到期时间，则更新fiber到期时间
+    fiber.expirationTime = expirationTime;
+  }
+  let alternate = fiber.alternate;
+  if (
+    alternate !== null &&
+    (alternate.expirationTime === NoWork ||
+      alternate.expirationTime > expirationTime)
+  ) {
+    alternate.expirationTime = expirationTime;
+  }
+  // Walk the parent path to the root and update the child expiration time.
+  let node = fiber.return;
+  if (node === null && fiber.tag === HostRoot) {
+    return fiber.stateNode;
+  }
+  while (node !== null) {
+    alternate = node.alternate;
+    if (
+      node.childExpirationTime === NoWork ||
+      node.childExpirationTime > expirationTime
+    ) {
+      node.childExpirationTime = expirationTime;
+      if (
+        alternate !== null &&
+        (alternate.childExpirationTime === NoWork ||
+          alternate.childExpirationTime > expirationTime)
+      ) {
+        alternate.childExpirationTime = expirationTime;
+      }
+    } else if (
+      alternate !== null &&
+      (alternate.childExpirationTime === NoWork ||
+        alternate.childExpirationTime > expirationTime)
+    ) {
+      alternate.childExpirationTime = expirationTime;
+    }
+    if (node.return === null && node.tag === HostRoot) {
+      return node.stateNode;
+    }
+    node = node.return;
+  }
+  return null;
+}
 ```
-这里`scheduleWork`主要进行虚拟DOM（fiber树）的更新。
+这里`scheduleWork`主要进行虚拟DOM（fiber树）的更新。`scheduleWork`的最开头有一个`recordScheduleUpdate`方法，我们找到`recordScheduleUpdate`，源码在`packages\react-reconciler\src\ReactDebugFiberPerf.js`中：
+``` typescript
+export function recordScheduleUpdate(): void {
+  if (enableUserTimingAPI) { // 全局变量，默认为true
+    if (isCommitting) { // 全局变量，默认为false, 没有进入分支
+      hasScheduledUpdateInCurrentCommit = true;
+    }
+    // 全局变量，默认为null，没有没有进入分支
+    if (
+      currentPhase !== null &&
+      currentPhase !== 'componentWillMount' &&
+      currentPhase !== 'componentWillReceiveProps'
+    ) {
+      hasScheduledUpdateInCurrentPhase = true;
+    }
+  }
+}
+```
+`recordScheduleUpdate`主要用来记录调度器的执行状态，如注释所示，它现在相当于什么都没有做。
+
+#### requestWork
+
+``` typescript
+function requestWork(root: FiberRoot, expirationTime: ExpirationTime) {
+  addRootToSchedule(root, expirationTime);
+  if (isRendering) {
+    // Prevent reentrancy. Remaining work will be scheduled at the end of
+    // the currently rendering batch.
+    return;
+  }
+
+  if (isBatchingUpdates) {
+    // Flush work at the end of the batch.
+    if (isUnbatchingUpdates) {
+      // ...unless we're inside unbatchedUpdates, in which case we should
+      // flush it now.
+      nextFlushedRoot = root;
+      nextFlushedExpirationTime = Sync;
+      performWorkOnRoot(root, Sync, true);
+    }
+    return;
+  }
+
+  // TODO: Get rid of Sync and use current time?
+  if (expirationTime === Sync) {
+    performSyncWork();
+  } else {
+    scheduleCallbackWithExpirationTime(root, expirationTime);
+  }
+}
+```
+
+#### performWork
+``` typescript
+function performWork(minExpirationTime: ExpirationTime, dl: Deadline | null) {
+  deadline = dl;
+
+  // Keep working on roots until there's no more work, or until we reach
+  // the deadline.
+  findHighestPriorityRoot();
+
+  if (deadline !== null) {
+    recomputeCurrentRendererTime();
+    currentSchedulerTime = currentRendererTime;
+
+    if (enableUserTimingAPI) {
+      const didExpire = nextFlushedExpirationTime < currentRendererTime;
+      const timeout = expirationTimeToMs(nextFlushedExpirationTime);
+      stopRequestCallbackTimer(didExpire, timeout);
+    }
+
+    while (
+      nextFlushedRoot !== null &&
+      nextFlushedExpirationTime !== NoWork &&
+      (minExpirationTime === NoWork ||
+        minExpirationTime >= nextFlushedExpirationTime) &&
+      (!deadlineDidExpire || currentRendererTime >= nextFlushedExpirationTime)
+    ) {
+      performWorkOnRoot(
+        nextFlushedRoot,
+        nextFlushedExpirationTime,
+        currentRendererTime >= nextFlushedExpirationTime,
+      );
+      findHighestPriorityRoot();
+      recomputeCurrentRendererTime();
+      currentSchedulerTime = currentRendererTime;
+    }
+  } else {
+    while (
+      nextFlushedRoot !== null &&
+      nextFlushedExpirationTime !== NoWork &&
+      (minExpirationTime === NoWork ||
+        minExpirationTime >= nextFlushedExpirationTime)
+    ) {
+      performWorkOnRoot(nextFlushedRoot, nextFlushedExpirationTime, true);
+      findHighestPriorityRoot();
+    }
+  }
+
+  // We're done flushing work. Either we ran out of time in this callback,
+  // or there's no more work left with sufficient priority.
+
+  // If we're inside a callback, set this to false since we just completed it.
+  if (deadline !== null) {
+    callbackExpirationTime = NoWork;
+    callbackID = null;
+  }
+  // If there's work left over, schedule a new callback.
+  if (nextFlushedExpirationTime !== NoWork) {
+    scheduleCallbackWithExpirationTime(
+      ((nextFlushedRoot: any): FiberRoot),
+      nextFlushedExpirationTime,
+    );
+  }
+
+  // Clean-up.
+  deadline = null;
+  deadlineDidExpire = false;
+
+  finishRendering();
+}
+```
+
+#### performWorkOnRoot
+``` typescript
+function performWorkOnRoot(
+  root: FiberRoot,
+  expirationTime: ExpirationTime,
+  isExpired: boolean,
+) {
+  invariant(
+    !isRendering,
+    'performWorkOnRoot was called recursively. This error is likely caused ' +
+      'by a bug in React. Please file an issue.',
+  );
+
+  isRendering = true;
+
+  // Check if this is async work or sync/expired work.
+  if (deadline === null || isExpired) {
+    // Flush work without yielding.
+    // TODO: Non-yieldy work does not necessarily imply expired work. A renderer
+    // may want to perform some work without yielding, but also without
+    // requiring the root to complete (by triggering placeholders).
+
+    let finishedWork = root.finishedWork;
+    if (finishedWork !== null) {
+      // This root is already complete. We can commit it.
+      completeRoot(root, finishedWork, expirationTime);
+    } else {
+      root.finishedWork = null;
+      // If this root previously suspended, clear its existing timeout, since
+      // we're about to try rendering again.
+      const timeoutHandle = root.timeoutHandle;
+      if (enableSuspense && timeoutHandle !== noTimeout) {
+        root.timeoutHandle = noTimeout;
+        // $FlowFixMe Complains noTimeout is not a TimeoutID, despite the check above
+        cancelTimeout(timeoutHandle);
+      }
+      const isYieldy = false;
+      renderRoot(root, isYieldy, isExpired);
+      finishedWork = root.finishedWork;
+      if (finishedWork !== null) {
+        // We've completed the root. Commit it.
+        completeRoot(root, finishedWork, expirationTime);
+      }
+    }
+  } else {
+    // Flush async work.
+    let finishedWork = root.finishedWork;
+    if (finishedWork !== null) {
+      // This root is already complete. We can commit it.
+      completeRoot(root, finishedWork, expirationTime);
+    } else {
+      root.finishedWork = null;
+      // If this root previously suspended, clear its existing timeout, since
+      // we're about to try rendering again.
+      const timeoutHandle = root.timeoutHandle;
+      if (enableSuspense && timeoutHandle !== noTimeout) {
+        root.timeoutHandle = noTimeout;
+        // $FlowFixMe Complains noTimeout is not a TimeoutID, despite the check above
+        cancelTimeout(timeoutHandle);
+      }
+      const isYieldy = true;
+      renderRoot(root, isYieldy, isExpired);
+      finishedWork = root.finishedWork;
+      if (finishedWork !== null) {
+        // We've completed the root. Check the deadline one more time
+        // before committing.
+        if (!shouldYield()) {
+          // Still time left. Commit the root.
+          completeRoot(root, finishedWork, expirationTime);
+        } else {
+          // There's no time left. Mark this root as complete. We'll come
+          // back and commit it later.
+          root.finishedWork = finishedWork;
+        }
+      }
+    }
+  }
+
+  isRendering = false;
+}
+```
+
+#### renderRoot
+``` typescript
+function renderRoot(
+  root: FiberRoot,
+  isYieldy: boolean,
+  isExpired: boolean,
+): void {
+  invariant(
+    !isWorking,
+    'renderRoot was called recursively. This error is likely caused ' +
+      'by a bug in React. Please file an issue.',
+  );
+  isWorking = true;
+  ReactCurrentOwner.currentDispatcher = Dispatcher;
+
+  const expirationTime = root.nextExpirationTimeToWorkOn;
+
+  // Check if we're starting from a fresh stack, or if we're resuming from
+  // previously yielded work.
+  if (
+    expirationTime !== nextRenderExpirationTime ||
+    root !== nextRoot ||
+    nextUnitOfWork === null
+  ) {
+    // Reset the stack and start working from the root.
+    resetStack();
+    nextRoot = root;
+    nextRenderExpirationTime = expirationTime;
+    nextUnitOfWork = createWorkInProgress(
+      nextRoot.current,
+      null,
+      nextRenderExpirationTime,
+    );
+    root.pendingCommitExpirationTime = NoWork;
+
+    if (enableSchedulerTracing) {
+      // Reset this flag once we start rendering a new root or at a new priority.
+      // This might indicate that suspended work has completed.
+      // If not, the flag will be reset.
+      nextRenderIncludesTimedOutPlaceholder = false;
+
+      // Determine which interactions this batch of work currently includes,
+      // So that we can accurately attribute time spent working on it,
+      // And so that cascading work triggered during the render phase will be associated with it.
+      const interactions: Set<Interaction> = new Set();
+      root.pendingInteractionMap.forEach(
+        (scheduledInteractions, scheduledExpirationTime) => {
+          if (scheduledExpirationTime <= expirationTime) {
+            scheduledInteractions.forEach(interaction =>
+              interactions.add(interaction),
+            );
+          }
+        },
+      );
+
+      // Store the current set of interactions on the FiberRoot for a few reasons:
+      // We can re-use it in hot functions like renderRoot() without having to recalculate it.
+      // We will also use it in commitWork() to pass to any Profiler onRender() hooks.
+      // This also provides DevTools with a way to access it when the onCommitRoot() hook is called.
+      root.memoizedInteractions = interactions;
+
+      if (interactions.size > 0) {
+        const subscriber = __subscriberRef.current;
+        if (subscriber !== null) {
+          const threadID = computeThreadID(
+            expirationTime,
+            root.interactionThreadID,
+          );
+          try {
+            subscriber.onWorkStarted(interactions, threadID);
+          } catch (error) {
+            // Work thrown by an interaction tracing subscriber should be rethrown,
+            // But only once it's safe (to avoid leaveing the scheduler in an invalid state).
+            // Store the error for now and we'll re-throw in finishRendering().
+            if (!hasUnhandledError) {
+              hasUnhandledError = true;
+              unhandledError = error;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  let prevInteractions: Set<Interaction> = (null: any);
+  if (enableSchedulerTracing) {
+    // We're about to start new traced work.
+    // Restore pending interactions so cascading work triggered during the render phase will be accounted for.
+    prevInteractions = __interactionsRef.current;
+    __interactionsRef.current = root.memoizedInteractions;
+  }
+
+  let didFatal = false;
+
+  startWorkLoopTimer(nextUnitOfWork);
+
+  do {
+    try {
+      workLoop(isYieldy);
+    } catch (thrownValue) {
+      if (nextUnitOfWork === null) {
+        // This is a fatal error.
+        didFatal = true;
+        onUncaughtError(thrownValue);
+      } else {
+        if (__DEV__) {
+          // Reset global debug state
+          // We assume this is defined in DEV
+          (resetCurrentlyProcessingQueue: any)();
+        }
+
+        const failedUnitOfWork: Fiber = nextUnitOfWork;
+        if (__DEV__ && replayFailedUnitOfWorkWithInvokeGuardedCallback) {
+          replayUnitOfWork(failedUnitOfWork, thrownValue, isYieldy);
+        }
+
+        // TODO: we already know this isn't true in some cases.
+        // At least this shows a nicer error message until we figure out the cause.
+        // https://github.com/facebook/react/issues/12449#issuecomment-386727431
+        invariant(
+          nextUnitOfWork !== null,
+          'Failed to replay rendering after an error. This ' +
+            'is likely caused by a bug in React. Please file an issue ' +
+            'with a reproducing case to help us find it.',
+        );
+
+        const sourceFiber: Fiber = nextUnitOfWork;
+        let returnFiber = sourceFiber.return;
+        if (returnFiber === null) {
+          // This is the root. The root could capture its own errors. However,
+          // we don't know if it errors before or after we pushed the host
+          // context. This information is needed to avoid a stack mismatch.
+          // Because we're not sure, treat this as a fatal error. We could track
+          // which phase it fails in, but doesn't seem worth it. At least
+          // for now.
+          didFatal = true;
+          onUncaughtError(thrownValue);
+        } else {
+          throwException(
+            root,
+            returnFiber,
+            sourceFiber,
+            thrownValue,
+            nextRenderExpirationTime,
+          );
+          nextUnitOfWork = completeUnitOfWork(sourceFiber);
+          continue;
+        }
+      }
+    }
+    break;
+  } while (true);
+
+  if (enableSchedulerTracing) {
+    // Traced work is done for now; restore the previous interactions.
+    __interactionsRef.current = prevInteractions;
+  }
+
+  // We're done performing work. Time to clean up.
+  isWorking = false;
+  ReactCurrentOwner.currentDispatcher = null;
+  resetContextDependences();
+
+  // Yield back to main thread.
+  if (didFatal) {
+    const didCompleteRoot = false;
+    stopWorkLoopTimer(interruptedBy, didCompleteRoot);
+    interruptedBy = null;
+    // There was a fatal error.
+    if (__DEV__) {
+      resetStackAfterFatalErrorInDev();
+    }
+    // `nextRoot` points to the in-progress root. A non-null value indicates
+    // that we're in the middle of an async render. Set it to null to indicate
+    // there's no more work to be done in the current batch.
+    nextRoot = null;
+    onFatal(root);
+    return;
+  }
+
+  if (nextUnitOfWork !== null) {
+    // There's still remaining async work in this tree, but we ran out of time
+    // in the current frame. Yield back to the renderer. Unless we're
+    // interrupted by a higher priority update, we'll continue later from where
+    // we left off.
+    const didCompleteRoot = false;
+    stopWorkLoopTimer(interruptedBy, didCompleteRoot);
+    interruptedBy = null;
+    onYield(root);
+    return;
+  }
+
+  // We completed the whole tree.
+  const didCompleteRoot = true;
+  stopWorkLoopTimer(interruptedBy, didCompleteRoot);
+  const rootWorkInProgress = root.current.alternate;
+  invariant(
+    rootWorkInProgress !== null,
+    'Finished root should have a work-in-progress. This error is likely ' +
+      'caused by a bug in React. Please file an issue.',
+  );
+
+  // `nextRoot` points to the in-progress root. A non-null value indicates
+  // that we're in the middle of an async render. Set it to null to indicate
+  // there's no more work to be done in the current batch.
+  nextRoot = null;
+  interruptedBy = null;
+
+  if (nextRenderDidError) {
+    // There was an error
+    if (hasLowerPriorityWork(root, expirationTime)) {
+      // There's lower priority work. If so, it may have the effect of fixing
+      // the exception that was just thrown. Exit without committing. This is
+      // similar to a suspend, but without a timeout because we're not waiting
+      // for a promise to resolve. React will restart at the lower
+      // priority level.
+      markSuspendedPriorityLevel(root, expirationTime);
+      const suspendedExpirationTime = expirationTime;
+      const rootExpirationTime = root.expirationTime;
+      onSuspend(
+        root,
+        rootWorkInProgress,
+        suspendedExpirationTime,
+        rootExpirationTime,
+        -1, // Indicates no timeout
+      );
+      return;
+    } else if (
+      // There's no lower priority work, but we're rendering asynchronously.
+      // Synchronsouly attempt to render the same level one more time. This is
+      // similar to a suspend, but without a timeout because we're not waiting
+      // for a promise to resolve.
+      !root.didError &&
+      !isExpired
+    ) {
+      root.didError = true;
+      const suspendedExpirationTime = (root.nextExpirationTimeToWorkOn = expirationTime);
+      const rootExpirationTime = (root.expirationTime = Sync);
+      onSuspend(
+        root,
+        rootWorkInProgress,
+        suspendedExpirationTime,
+        rootExpirationTime,
+        -1, // Indicates no timeout
+      );
+      return;
+    }
+  }
+
+  if (enableSuspense && !isExpired && nextLatestAbsoluteTimeoutMs !== -1) {
+    // The tree was suspended.
+    if (enableSchedulerTracing) {
+      nextRenderIncludesTimedOutPlaceholder = true;
+    }
+    const suspendedExpirationTime = expirationTime;
+    markSuspendedPriorityLevel(root, suspendedExpirationTime);
+
+    // Find the earliest uncommitted expiration time in the tree, including
+    // work that is suspended. The timeout threshold cannot be longer than
+    // the overall expiration.
+    const earliestExpirationTime = findEarliestOutstandingPriorityLevel(
+      root,
+      expirationTime,
+    );
+    const earliestExpirationTimeMs = expirationTimeToMs(earliestExpirationTime);
+    if (earliestExpirationTimeMs < nextLatestAbsoluteTimeoutMs) {
+      nextLatestAbsoluteTimeoutMs = earliestExpirationTimeMs;
+    }
+
+    // Subtract the current time from the absolute timeout to get the number
+    // of milliseconds until the timeout. In other words, convert an absolute
+    // timestamp to a relative time. This is the value that is passed
+    // to `setTimeout`.
+    const currentTimeMs = expirationTimeToMs(requestCurrentTime());
+    let msUntilTimeout = nextLatestAbsoluteTimeoutMs - currentTimeMs;
+    msUntilTimeout = msUntilTimeout < 0 ? 0 : msUntilTimeout;
+
+    // TODO: Account for the Just Noticeable Difference
+
+    const rootExpirationTime = root.expirationTime;
+    onSuspend(
+      root,
+      rootWorkInProgress,
+      suspendedExpirationTime,
+      rootExpirationTime,
+      msUntilTimeout,
+    );
+    return;
+  }
+
+  // Ready to commit.
+  onComplete(root, rootWorkInProgress, expirationTime);
+}
+```
 
 #### 小结
 至此首次渲染的执行流程为：
-`ReactDOM.render` => `legacyRenderSubtreeIntoContainer` => `DOMRenderer.updateContainer` => `scheduleRootUpdate` => `scheduleWork` =>
+`ReactDOM.render` => `legacyRenderSubtreeIntoContainer` => `DOMRenderer.updateContainer` => `scheduleRootUpdate` => `scheduleWork` => `requestWork` => `performWork` => `performWorkOnRoot` => `renderRoot`
 
 ## 高级指南
 
