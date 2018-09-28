@@ -896,10 +896,9 @@ console.log(renderer.toJSON());
 ### 首次渲染
 
 #### 渲染入口
+在 Web 项目中，如果我们要将应用渲染至页面，通常会有如下代码：
 
-在 Web 项目中，如果要将应用渲染至页面，通常会有如下代码：
-
-``` js
+``` typescript
 import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App'; // 应用根组件
@@ -907,7 +906,7 @@ import App from './App'; // 应用根组件
 ReactDOM.render(<App />, document.getElementById('root')); // 应用挂载容器DOM
 ```
 
-这里`react-dom`是用于浏览器端渲染React应用的模块，通过`ReactDOM.render(component, mountNode)`可以对`自定义组件/原生DOM/字符串`进行挂载。在React16中，虽然也是通过JSX编译得到一个虚拟DOM对象，但对这些虚拟DOM对象的再加工则是经过翻天覆地的变化。我们需要追根溯底，看它是怎么一步步转换的。我们首先找到`ReactDOM.render`，源码在`packages/react-dom/src/client/ReactDOM.js`中，有三个类似的方法：
+这里`react-dom`是浏览器端渲染React应用的模块，通过`ReactDOM.render(component, mountNode)`可以对`自定义组件/原生DOM/字符串`进行挂载。在React16中，虽然还是通过JSX编译得到一个虚拟DOM对象，但对这些虚拟DOM对象的再加工则是发生了翻天覆地的变化。我们需要追根溯底，看它是怎么一步步转换的。我们首先找到`ReactDOM.render`，源码在`packages/react-dom/src/client/ReactDOM.js`中，有三个类似的方法：
 
 ``` typescript
 const ReactDOM: Object = {
@@ -924,8 +923,8 @@ const ReactDOM: Object = {
   },
   // React15的重要API，逐渐退出舞台
   render(
-    element: React$Element<any>,  // React元素，通常是项目根组件
-    container: DOMContainer, // React应用挂载的DOM容器
+    element: React$Element<any>,  // react组件对象，通常是项目根组件
+    container: DOMContainer, // 就是id为root的那个dom
     callback: ?Function, // 回调函数
   ) {
     return legacyRenderSubtreeIntoContainer(
@@ -970,7 +969,6 @@ function legacyRenderSubtreeIntoContainer(
   forceHydrate: boolean, // 服务器端渲染标识
   callback: ?Function, // 回调函数 
 ) {
-  // TODO: 确保所有入口点都包含此检查
   // 对 container 进行校验
   invariant(
     isValidContainer(container),
@@ -985,7 +983,7 @@ function legacyRenderSubtreeIntoContainer(
   // 获取 root 对象
   let root: Root = (container._reactRootContainer: any);
   if (!root) { // 初次渲染时初始化
-    // 创建一个 FiberRoot对象 并将它缓存到DOM容器的reactRootContainer属性
+    // 创建一个 FiberRoot对象 并将它缓存到DOM容器的_reactRootContainer属性
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
@@ -1031,6 +1029,23 @@ function legacyRenderSubtreeIntoContainer(
   }
   // 返回根容器fiber树的根fiber实例
   return DOMRenderer.getPublicRootInstance(root._internalRoot);
+}
+
+// 源码在 packages/react-reconciler/src/ReactFiberReconciler.js 中
+export function getPublicRootInstance(
+  container: OpaqueRoot,
+): React$Component<any, any> | PublicInstance | null {
+  // 获取fiber实例
+  const containerFiber = container.current;
+  if (!containerFiber.child) {
+    return null;
+  }
+  switch (containerFiber.child.tag) {
+    case HostComponent:
+      return getPublicInstance(containerFiber.child.stateNode);
+    default:
+      return containerFiber.child.stateNode;
+  }
 }
 
 ```
@@ -1335,8 +1350,8 @@ function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
 从`legacyRenderSubtreeIntoContainer`函数里可以看出，无论怎样判断，最终都会到`root.legacy_renderSubtreeIntoContainer`和`root.render`两个方法，而这两个方法的核心就是`DOMRenderer.updateContainer`，无非就是传不传父组件这点区别。我们找到`DOMRenderer.updateContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
 ``` typescript
 export function updateContainer(
-  element: ReactNodeList, // ReactDOM的第一个参数，通常表示一个数组，现在它泛指各种虚拟DOM了
-  container: OpaqueRoot, // ReactDOM.render(<div/>, container)的第二个参数，换言之是一个元素节点
+  element: ReactNodeList, // ReactDOM.render函数的第一个参数，泛指各种虚拟DOM
+  container: OpaqueRoot, // ReactDOM.render函数的第二个参数，也就是一个元素节点
   parentComponent: ?React$Component<any, any>, // parentComponent为之前的根组件，现在它为null
   callback: ?Function,
 ): ExpirationTime {
@@ -1403,8 +1418,8 @@ function computeExpirationForFiber(currentTime: ExpirationTime, fiber: Fiber) {
 
 // 根据渲染优先级更新dom
 export function updateContainerAtExpirationTime(
-  element: ReactNodeList, // ReactDOM的第一个参数，通常表示一个数组，现在它泛指各种虚拟DOM了
-  container: OpaqueRoot, // ReactDOM.render(<div/>, container)的第二个参数，换言之是一个元素节点
+  element: ReactNodeList, // ReactDOM.render函数的第一个参数，泛指各种虚拟DOM
+  container: OpaqueRoot, // ReactDOM.render函数的第二个参数，也就是一个元素节点
   parentComponent: ?React$Component<any, any>,   // parentComponent为之前的根组件，现在它为null
   expirationTime: ExpirationTime, // 计算出来的渲染优先级
   callback: ?Function,
