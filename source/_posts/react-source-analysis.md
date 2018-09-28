@@ -895,7 +895,7 @@ console.log(renderer.toJSON());
 
 ### 首次渲染
 
-#### ReactDOM.render
+#### 渲染入口
 
 在 Web 项目中，如果要将应用渲染至页面，通常会有如下代码：
 
@@ -959,7 +959,7 @@ const ReactDOM: Object = {
 ```
 这里`ReactDOM.render/hydrate/unstable_renderSubtreeIntoContainer/unmountComponentAtNode`都是`legacyRenderSubtreeIntoContainer`方法的加壳方法。因此`ReactDOM.render`实际调用了`legacyRenderSubtreeIntoContainer`，这是一个内部API。
 
-#### legacyRenderSubtreeIntoContainer
+#### 渲染虚拟dom树
 `legacyRenderSubtreeIntoContainer`从字面可以看出它大致意思就是把虚拟的dom树渲染到真实的dom容器中，我们找到`legacyRenderSubtreeIntoContainer`方法，源码在`packages/react-dom/src/client/ReactDOM.js`中：
 ``` typescript
 // 渲染组件的子组件树至父容器
@@ -1121,42 +1121,7 @@ ReactRoot.prototype.createBatch = function(): Batch {
   // ...
 };
 ```
-可以看出构造函数`ReactRoot`有render、unmount、legacy_renderSubtreeIntoContainer等原型方法外，同时还声明了一个和fiber相关的`_internalRoot`属性。其中`render`和`legacy_renderSubtreeIntoContainer`原型方法都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。`_internalRoot`是由`DOMRenderer.createContainer`生成的。这里`DOMRenderer.createContainer`是调和算法里面的操作，我们稍后介绍。
-
-##### unbatchedUpdates
-我们找到`DOMRenderer.unbatchedUpdates`，源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
-``` js
-// 正在批量更新标识
-let isBatchingUpdates: boolean = false;
-// 未批量更新标识
-let isUnbatchingUpdates: boolean = false;
-// 非批量更新操作
-function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
-  // 如果正在批量更新
-  if (isBatchingUpdates && !isUnbatchingUpdates) {
-    // 未批量更新设为true
-    isUnbatchingUpdates = true;
-    try {
-      // 运行入参函数且返回执行结果
-      return fn(a);
-    } finally {
-      // 仍旧将未批量更新设为false
-      isUnbatchingUpdates = false;
-    }
-  }
-  // 不管是否在批量更新流程中，都执行入参函数
-  return fn(a);
-}
-```
-由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。`DOMRenderer.unbatchedUpdates`的回调执行`root.legacy_renderSubtreeIntoContainer`或`root.render`，不管是`root.render`还是`root.legacy_renderSubtreeIntoContainer`都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。这里`DOMRenderer.updateContainer`是调和算法里面的操作，我们也稍后介绍。
-
-##### root.legacy_renderSubtreeIntoContainer 和 root.render
-不管是`root.render`还是`root.legacy_renderSubtreeIntoContainer`都会去执行`DOMRenderer.updateContainer`方法，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。这里`DOMRenderer.updateContainer`是调和算法里面的操作，我们也稍后介绍。
-
-#### 进行调和算法
-
-##### createContainer
-由上可知，`root._internalRoot`实际上是由`DOMRenderer.createContainer`创建的，我们找到`DOMRenderer.createContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
+可以看出构造函数`ReactRoot`有render、unmount、legacy_renderSubtreeIntoContainer等原型方法外，同时还声明了一个和fiber相关的`_internalRoot`属性。其中`render`和`legacy_renderSubtreeIntoContainer`原型方法都会去执行`DOMRenderer.updateContainer`方法更新容器内容，唯一差别就是第三个参数一个传`null`，一个传`parentComponent`。`_internalRoot`是由`DOMRenderer.createContainer`生成的。我们找到`DOMRenderer.createContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
 ``` js
 // containerInfo就是ReactDOM.render(<div/>, container)的第二个参数，换言之是一个元素节点
 export function createContainer(
@@ -1339,7 +1304,34 @@ container = { // 就是我们传入的那个真实dom
 } 
 ```
 
-#### DOMRenderer.updateContainer
+##### unbatchedUpdates
+我们找到`DOMRenderer.unbatchedUpdates`，源码在`packages\react-reconciler\src\ReactFiberScheduler.js`中：
+``` js
+// 正在批量更新标识
+let isBatchingUpdates: boolean = false;
+// 未批量更新标识
+let isUnbatchingUpdates: boolean = false;
+// 非批量更新操作
+function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
+  // 如果正在批量更新
+  if (isBatchingUpdates && !isUnbatchingUpdates) {
+    // 未批量更新设为true
+    isUnbatchingUpdates = true;
+    try {
+      // 运行入参函数且返回执行结果
+      return fn(a);
+    } finally {
+      // 仍旧将未批量更新设为false
+      isUnbatchingUpdates = false;
+    }
+  }
+  // 不管是否在批量更新流程中，都执行入参函数
+  return fn(a);
+}
+```
+由此可知`unbatchedUpdates`无论如何都会执行入参函数，其中`isBatchingUpdates`和`isUnbatchingUpdates`初始值都是false。`DOMRenderer.unbatchedUpdates`的回调执行`root.legacy_renderSubtreeIntoContainer`或`root.render`。
+
+#### 更新容器内容
 从`legacyRenderSubtreeIntoContainer`函数里可以看出，无论怎样判断，最终都会到`root.legacy_renderSubtreeIntoContainer`和`root.render`两个方法，而这两个方法的核心就是`DOMRenderer.updateContainer`，无非就是传不传父组件这点区别。我们找到`DOMRenderer.updateContainer`，源码在`packages\react-reconciler\src\ReactFiberReconciler.js`中：
 ``` typescript
 export function updateContainer(
@@ -1463,9 +1455,10 @@ function getContextForSubtree(
   return parentContext;
 }
 ```
-`updateContainer`的源码很简单，通过`computeExpirationForFiber`获得计算优先级，然后丢给`updateContainerAtExpirationTime`，`updateContainerAtExpirationTime`相当于什么都没做，通过`getContextForSubtree`（这里`getContextForSubtree`因为一开始`parentComponent`是不存在的，于是返回一个空对象。注意，这个空对象可以重复使用，不用每次返回一个新的空对象，这是一个很好的优化）获得上下文对象，然后分配给`container.context`或`container.pendingContext`，最后丢给`scheduleRootUpdate`，我们找到`scheduleRootUpdate`，源码在`packages/react-reconciler/src/ReactFiberReconciler.js`中：
+`updateContainer`的源码很简单，通过`computeExpirationForFiber`获得计算优先级，这里`updateContainerAtExpirationTime`其实相当于什么都没做，通过`getContextForSubtree`（这里`getContextForSubtree`因为一开始`parentComponent`是不存在的，于是返回一个空对象。注意，这个空对象可以重复使用，不用每次返回一个新的空对象，这是一个很好的优化）获得上下文对象，然后分配给`container.context`或`container.pendingContext`，最后丢给`scheduleRootUpdate`。
 
-#### scheduleRootUpdate
+#### 开始更新
+我们找到`scheduleRootUpdate`，源码在`packages/react-reconciler/src/ReactFiberReconciler.js`中：
 ``` typescript
 // 进行根节点更新
 function scheduleRootUpdate(
@@ -1515,8 +1508,7 @@ export function createUpdate(expirationTime: ExpirationTime): Update<*> {
   };
 }
 ```
-`scheduleRootUpdate`是将用户的传参封装成一个`update`对象, `update`对象有`payload`对象，它就是相当于React15中 的setState的第一个state传参，但现在`payload`中把`children`也放进去了。然后开始队列更新：`enqueueUpdate(...)` 和执行队列：`scheduleWork(...)`，现在我们看找到`enqueueUpdate`，源码在`packages/react-reconciler/src/ReactUpdateQueue.js`中：
-##### enqueueUpdate
+`scheduleRootUpdate`是将用户的传参封装成一个`update`对象, `update`对象有`payload`对象，它就是相当于React15中 的setState的第一个state传参，但现在`payload`中把`children`也放进去了。然后添加更新任务至fiber：`enqueueUpdate(...)`，现在我们找到`enqueueUpdate`，源码在`packages/react-reconciler/src/ReactUpdateQueue.js`中：
 ``` typescript
 export function enqueueUpdate<State>(fiber: Fiber, update: Update<State>) {
   // alternate 主要用来保存更新过程中各版本更新队列，方便崩溃或冲突时回退
@@ -1641,8 +1633,10 @@ function appendUpdateToQueue<State>(
   }
 }
 ```
-这里`enqueueUpdate`是一个链表，然后根据`fiber`的状态创建一个或两个列队对象，接下来我们在看一下如何执行队列的，我们找到`scheduleWork`，源码在`packages/react-reconciler/src/ReactFiberScheduler.js`中：
-#### scheduleWork
+这里`enqueueUpdate`是一个链表，然后根据`fiber`的状态创建一个或两个列队对象，再接下来调用调度器API：`scheduleWork(...)`来调度fiber任务，现在我们在看一下如何处理更新的。
+
+#### 处理更新
+我们找到`scheduleWork`，源码在`packages/react-reconciler/src/ReactFiberScheduler.js`中：
 ``` typescript
 function scheduleWork(fiber: Fiber, expirationTime: ExpirationTime) {
   recordScheduleUpdate();
@@ -1804,7 +1798,7 @@ export function recordScheduleUpdate(): void {
 ```
 `recordScheduleUpdate`主要用来记录调度器的执行状态，如注释所示，它现在相当于什么都没有做。
 
-#### requestWork
+##### requestWork
 
 ``` typescript
 function requestWork(root: FiberRoot, expirationTime: ExpirationTime) {
@@ -1836,7 +1830,7 @@ function requestWork(root: FiberRoot, expirationTime: ExpirationTime) {
 }
 ```
 
-#### performWork
+##### performWork
 ``` typescript
 function performWork(minExpirationTime: ExpirationTime, dl: Deadline | null) {
   deadline = dl;
@@ -1907,7 +1901,7 @@ function performWork(minExpirationTime: ExpirationTime, dl: Deadline | null) {
 }
 ```
 
-#### performWorkOnRoot
+##### performWorkOnRoot
 ``` typescript
 function performWorkOnRoot(
   root: FiberRoot,
@@ -1989,7 +1983,7 @@ function performWorkOnRoot(
 }
 ```
 
-#### renderRoot
+##### renderRoot
 ``` typescript
 function renderRoot(
   root: FiberRoot,
@@ -2284,10 +2278,472 @@ function renderRoot(
 }
 ```
 
+##### completeRoot
+``` typescript
+function completeRoot(
+  root: FiberRoot,
+  finishedWork: Fiber,
+  expirationTime: ExpirationTime,
+): void {
+  // Check if there's a batch that matches this expiration time.
+  const firstBatch = root.firstBatch;
+  if (firstBatch !== null && firstBatch._expirationTime <= expirationTime) {
+    if (completedBatches === null) {
+      completedBatches = [firstBatch];
+    } else {
+      completedBatches.push(firstBatch);
+    }
+    if (firstBatch._defer) {
+      // This root is blocked from committing by a batch. Unschedule it until
+      // we receive another update.
+      root.finishedWork = finishedWork;
+      root.expirationTime = NoWork;
+      return;
+    }
+  }
+
+  // Commit the root.
+  root.finishedWork = null;
+
+  // Check if this is a nested update (a sync update scheduled during the
+  // commit phase).
+  if (root === lastCommittedRootDuringThisBatch) {
+    // If the next root is the same as the previous root, this is a nested
+    // update. To prevent an infinite loop, increment the nested update count.
+    nestedUpdateCount++;
+  } else {
+    // Reset whenever we switch roots.
+    lastCommittedRootDuringThisBatch = root;
+    nestedUpdateCount = 0;
+  }
+  commitRoot(root, finishedWork);
+}
+```
+
+#### 提交更新
+处理完更新后需要确认提交更新至渲染模块，然后渲染模块才能将更新渲染至DOM。
+``` typescript
+function commitRoot(root: FiberRoot, finishedWork: Fiber): void {
+  isWorking = true;
+  isCommitting = true;
+  startCommitTimer();
+
+  invariant(
+    root.current !== finishedWork,
+    'Cannot commit the same tree as before. This is probably a bug ' +
+      'related to the return field. This error is likely caused by a bug ' +
+      'in React. Please file an issue.',
+  );
+  const committedExpirationTime = root.pendingCommitExpirationTime;
+  invariant(
+    committedExpirationTime !== NoWork,
+    'Cannot commit an incomplete root. This error is likely caused by a ' +
+      'bug in React. Please file an issue.',
+  );
+  root.pendingCommitExpirationTime = NoWork;
+
+  // Update the pending priority levels to account for the work that we are
+  // about to commit. This needs to happen before calling the lifecycles, since
+  // they may schedule additional updates.
+  const updateExpirationTimeBeforeCommit = finishedWork.expirationTime;
+  const childExpirationTimeBeforeCommit = finishedWork.childExpirationTime;
+  const earliestRemainingTimeBeforeCommit =
+    updateExpirationTimeBeforeCommit === NoWork ||
+    (childExpirationTimeBeforeCommit !== NoWork &&
+      childExpirationTimeBeforeCommit < updateExpirationTimeBeforeCommit)
+      ? childExpirationTimeBeforeCommit
+      : updateExpirationTimeBeforeCommit;
+  markCommittedPriorityLevels(root, earliestRemainingTimeBeforeCommit);
+
+  let prevInteractions: Set<Interaction> = (null: any);
+  if (enableSchedulerTracing) {
+    // Restore any pending interactions at this point,
+    // So that cascading work triggered during the render phase will be accounted for.
+    prevInteractions = __interactionsRef.current;
+    __interactionsRef.current = root.memoizedInteractions;
+  }
+
+  // Reset this to null before calling lifecycles
+  ReactCurrentOwner.current = null;
+
+  let firstEffect;
+  if (finishedWork.effectTag > PerformedWork) {
+    // A fiber's effect list consists only of its children, not itself. So if
+    // the root has an effect, we need to add it to the end of the list. The
+    // resulting list is the set that would belong to the root's parent, if
+    // it had one; that is, all the effects in the tree including the root.
+    if (finishedWork.lastEffect !== null) {
+      finishedWork.lastEffect.nextEffect = finishedWork;
+      firstEffect = finishedWork.firstEffect;
+    } else {
+      firstEffect = finishedWork;
+    }
+  } else {
+    // There is no effect on the root.
+    firstEffect = finishedWork.firstEffect;
+  }
+
+  prepareForCommit(root.containerInfo);
+
+  // Invoke instances of getSnapshotBeforeUpdate before mutation.
+  nextEffect = firstEffect;
+  startCommitSnapshotEffectsTimer();
+  while (nextEffect !== null) {
+    let didError = false;
+    let error;
+    if (__DEV__) {
+      invokeGuardedCallback(null, commitBeforeMutationLifecycles, null);
+      if (hasCaughtError()) {
+        didError = true;
+        error = clearCaughtError();
+      }
+    } else {
+      try {
+        commitBeforeMutationLifecycles();
+      } catch (e) {
+        didError = true;
+        error = e;
+      }
+    }
+    if (didError) {
+      invariant(
+        nextEffect !== null,
+        'Should have next effect. This error is likely caused by a bug ' +
+          'in React. Please file an issue.',
+      );
+      captureCommitPhaseError(nextEffect, error);
+      // Clean-up
+      if (nextEffect !== null) {
+        nextEffect = nextEffect.nextEffect;
+      }
+    }
+  }
+  stopCommitSnapshotEffectsTimer();
+
+  if (enableProfilerTimer) {
+    // Mark the current commit time to be shared by all Profilers in this batch.
+    // This enables them to be grouped later.
+    recordCommitTime();
+  }
+
+  // Commit all the side-effects within a tree. We'll do this in two passes.
+  // The first pass performs all the host insertions, updates, deletions and
+  // ref unmounts.
+  nextEffect = firstEffect;
+  startCommitHostEffectsTimer();
+  while (nextEffect !== null) {
+    let didError = false;
+    let error;
+    if (__DEV__) {
+      invokeGuardedCallback(null, commitAllHostEffects, null);
+      if (hasCaughtError()) {
+        didError = true;
+        error = clearCaughtError();
+      }
+    } else {
+      try {
+        commitAllHostEffects();
+      } catch (e) {
+        didError = true;
+        error = e;
+      }
+    }
+    if (didError) {
+      invariant(
+        nextEffect !== null,
+        'Should have next effect. This error is likely caused by a bug ' +
+          'in React. Please file an issue.',
+      );
+      captureCommitPhaseError(nextEffect, error);
+      // Clean-up
+      if (nextEffect !== null) {
+        nextEffect = nextEffect.nextEffect;
+      }
+    }
+  }
+  stopCommitHostEffectsTimer();
+
+  resetAfterCommit(root.containerInfo);
+
+  // The work-in-progress tree is now the current tree. This must come after
+  // the first pass of the commit phase, so that the previous tree is still
+  // current during componentWillUnmount, but before the second pass, so that
+  // the finished work is current during componentDidMount/Update.
+  root.current = finishedWork;
+
+  // In the second pass we'll perform all life-cycles and ref callbacks.
+  // Life-cycles happen as a separate pass so that all placements, updates,
+  // and deletions in the entire tree have already been invoked.
+  // This pass also triggers any renderer-specific initial effects.
+  nextEffect = firstEffect;
+  startCommitLifeCyclesTimer();
+  while (nextEffect !== null) {
+    let didError = false;
+    let error;
+    if (__DEV__) {
+      invokeGuardedCallback(
+        null,
+        commitAllLifeCycles,
+        null,
+        root,
+        committedExpirationTime,
+      );
+      if (hasCaughtError()) {
+        didError = true;
+        error = clearCaughtError();
+      }
+    } else {
+      try {
+        commitAllLifeCycles(root, committedExpirationTime);
+      } catch (e) {
+        didError = true;
+        error = e;
+      }
+    }
+    if (didError) {
+      invariant(
+        nextEffect !== null,
+        'Should have next effect. This error is likely caused by a bug ' +
+          'in React. Please file an issue.',
+      );
+      captureCommitPhaseError(nextEffect, error);
+      if (nextEffect !== null) {
+        nextEffect = nextEffect.nextEffect;
+      }
+    }
+  }
+
+  isCommitting = false;
+  isWorking = false;
+  stopCommitLifeCyclesTimer();
+  stopCommitTimer();
+  onCommitRoot(finishedWork.stateNode);
+  if (__DEV__ && ReactFiberInstrumentation.debugTool) {
+    ReactFiberInstrumentation.debugTool.onCommitWork(finishedWork);
+  }
+
+  const updateExpirationTimeAfterCommit = finishedWork.expirationTime;
+  const childExpirationTimeAfterCommit = finishedWork.childExpirationTime;
+  const earliestRemainingTimeAfterCommit =
+    updateExpirationTimeAfterCommit === NoWork ||
+    (childExpirationTimeAfterCommit !== NoWork &&
+      childExpirationTimeAfterCommit < updateExpirationTimeAfterCommit)
+      ? childExpirationTimeAfterCommit
+      : updateExpirationTimeAfterCommit;
+  if (earliestRemainingTimeAfterCommit === NoWork) {
+    // If there's no remaining work, we can clear the set of already failed
+    // error boundaries.
+    legacyErrorBoundariesThatAlreadyFailed = null;
+  }
+  onCommit(root, earliestRemainingTimeAfterCommit);
+
+  if (enableSchedulerTracing) {
+    __interactionsRef.current = prevInteractions;
+
+    let subscriber;
+
+    try {
+      subscriber = __subscriberRef.current;
+      if (subscriber !== null && root.memoizedInteractions.size > 0) {
+        const threadID = computeThreadID(
+          committedExpirationTime,
+          root.interactionThreadID,
+        );
+        subscriber.onWorkStopped(root.memoizedInteractions, threadID);
+      }
+    } catch (error) {
+      // It's not safe for commitRoot() to throw.
+      // Store the error for now and we'll re-throw in finishRendering().
+      if (!hasUnhandledError) {
+        hasUnhandledError = true;
+        unhandledError = error;
+      }
+    } finally {
+      if (!nextRenderIncludesTimedOutPlaceholder) {
+        // Clear completed interactions from the pending Map.
+        // Unless the render was suspended or cascading work was scheduled,
+        // In which case– leave pending interactions until the subsequent render.
+        const pendingInteractionMap = root.pendingInteractionMap;
+        pendingInteractionMap.forEach(
+          (scheduledInteractions, scheduledExpirationTime) => {
+            // Only decrement the pending interaction count if we're done.
+            // If there's still work at the current priority,
+            // That indicates that we are waiting for suspense data.
+            if (
+              earliestRemainingTimeAfterCommit === NoWork ||
+              scheduledExpirationTime < earliestRemainingTimeAfterCommit
+            ) {
+              pendingInteractionMap.delete(scheduledExpirationTime);
+
+              scheduledInteractions.forEach(interaction => {
+                interaction.__count--;
+
+                if (subscriber !== null && interaction.__count === 0) {
+                  try {
+                    subscriber.onInteractionScheduledWorkCompleted(interaction);
+                  } catch (error) {
+                    // It's not safe for commitRoot() to throw.
+                    // Store the error for now and we'll re-throw in finishRendering().
+                    if (!hasUnhandledError) {
+                      hasUnhandledError = true;
+                      unhandledError = error;
+                    }
+                  }
+                }
+              });
+            }
+          },
+        );
+      }
+    }
+  }
+}
+
+// 循环执行提交更新
+function commitAllHostEffects() {
+  while (nextEffect !== null) {
+    if (__DEV__) {
+      ReactCurrentFiber.setCurrentFiber(nextEffect);
+    }
+    recordEffect();
+
+    const effectTag = nextEffect.effectTag;
+
+    if (effectTag & ContentReset) {
+      commitResetTextContent(nextEffect);
+    }
+
+    if (effectTag & Ref) {
+      const current = nextEffect.alternate;
+      if (current !== null) {
+        commitDetachRef(current);
+      }
+    }
+
+    // The following switch statement is only concerned about placement,
+    // updates, and deletions. To avoid needing to add a case for every
+    // possible bitmap value, we remove the secondary effects from the
+    // effect tag and switch on that value.
+    let primaryEffectTag = effectTag & (Placement | Update | Deletion);
+    switch (primaryEffectTag) {
+      case Placement: {
+        commitPlacement(nextEffect);
+        // Clear the "placement" from effect tag so that we know that this is inserted, before
+        // any life-cycles like componentDidMount gets called.
+        // TODO: findDOMNode doesn't rely on this any more but isMounted
+        // does and isMounted is deprecated anyway so we should be able
+        // to kill this.
+        nextEffect.effectTag &= ~Placement;
+        break;
+      }
+      case PlacementAndUpdate: {
+        // Placement
+        commitPlacement(nextEffect);
+        // Clear the "placement" from effect tag so that we know that this is inserted, before
+        // any life-cycles like componentDidMount gets called.
+        nextEffect.effectTag &= ~Placement;
+
+        // Update
+        const current = nextEffect.alternate;
+        commitWork(current, nextEffect);
+        break;
+      }
+      case Update: {
+        const current = nextEffect.alternate;
+        commitWork(current, nextEffect);
+        break;
+      }
+      case Deletion: {
+        commitDeletion(nextEffect);
+        break;
+      }
+    }
+    nextEffect = nextEffect.nextEffect;
+  }
+
+  if (__DEV__) {
+    ReactCurrentFiber.resetCurrentFiber();
+  }
+}
+```
+提交更新是最后确认更新组件的阶段，现在我们看一下提交更新的主要逻辑：
+``` typescript
+function commitWork(current: Fiber | null, finishedWork: Fiber): void {
+  if (!supportsMutation) {
+    commitContainer(finishedWork);
+    return;
+  }
+
+  switch (finishedWork.tag) {
+    case ClassComponent:
+    case ClassComponentLazy: {
+      return;
+    }
+    case HostComponent: {
+      const instance: Instance = finishedWork.stateNode;
+      if (instance != null) {
+        // Commit the work prepared earlier.
+        const newProps = finishedWork.memoizedProps;
+        // For hydration we reuse the update path but we treat the oldProps
+        // as the newProps. The updatePayload will contain the real change in
+        // this case.
+        const oldProps = current !== null ? current.memoizedProps : newProps;
+        const type = finishedWork.type;
+        // TODO: Type the updateQueue to be specific to host components.
+        const updatePayload: null | UpdatePayload = (finishedWork.updateQueue: any);
+        finishedWork.updateQueue = null;
+        if (updatePayload !== null) {
+          commitUpdate(
+            instance,
+            updatePayload,
+            type,
+            oldProps,
+            newProps,
+            finishedWork,
+          );
+        }
+      }
+      return;
+    }
+    case HostText: {
+      invariant(
+        finishedWork.stateNode !== null,
+        'This should have a text node initialized. This error is likely ' +
+          'caused by a bug in React. Please file an issue.',
+      );
+      const textInstance: TextInstance = finishedWork.stateNode;
+      const newText: string = finishedWork.memoizedProps;
+      // For hydration we reuse the update path but we treat the oldProps
+      // as the newProps. The updatePayload will contain the real change in
+      // this case.
+      const oldText: string =
+        current !== null ? current.memoizedProps : newText;
+      commitTextUpdate(textInstance, oldText, newText);
+      return;
+    }
+    case HostRoot: {
+      return;
+    }
+    case Profiler: {
+      return;
+    }
+    case PlaceholderComponent: {
+      return;
+    }
+    default: {
+      invariant(
+        false,
+        'This unit of work tag should not have side-effects. This error is ' +
+          'likely caused by a bug in React. Please file an issue.',
+      );
+    }
+  }
+}
+```
+
 #### 小结
 至此首次渲染的执行流程为：
-`ReactDOM.render` => `legacyRenderSubtreeIntoContainer` => `DOMRenderer.updateContainer` => `scheduleRootUpdate` => `scheduleWork` => `requestWork` => `performWork` => `performWorkOnRoot` => `renderRoot`
-
+`ReactDOM.render`（渲染入口） => `legacyRenderSubtreeIntoContainer`（把虚拟的dom树渲染到真实的dom容器中） => `DOMRenderer.updateContainer`（更新容器内容） => `scheduleRootUpdate`（开始更新） => `scheduleWork`（处理更新） => `commitWork`（提交更新）
 ## 高级指南
 
 ### 插槽(Portals)
