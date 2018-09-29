@@ -896,7 +896,7 @@ console.log(renderer.toJSON());
 ### 首次渲染
 
 #### 渲染入口
-在 Web 项目中，如果我们要将应用渲染至页面，通常会有如下代码：
+在 Web 项目中，如果我们要将应用渲染至页面，通常会用如下代码：
 
 ``` typescript
 import React from 'react';
@@ -1094,7 +1094,7 @@ function legacyCreateRootFromDOMContainer(
 }
 ```
 我们发现该函数实际上返回的是由构造函数`ReactRoot`创建的对象。其中如果在非ssr的情况下，将dom根节点清空。我们找到构造函数`ReactRoot`，源码在`packages\react-dom\src\client\ReactDOM.js`中：
-``` js
+``` typescript
 // 构造函数
 function ReactRoot(
   container: Container, // ReactDOM.render(<div/>, container)的第二个参数，也就是一个元素节点
@@ -1113,8 +1113,8 @@ function ReactRoot(
 // 以下几个是原型方法
 // 渲染
 ReactRoot.prototype.render = function(
-  children: ReactNodeList,
-  callback: ?() => mixed,
+  children: ReactNodeList, // 虚拟dom树
+  callback: ?() => mixed, // 回调函数
 ): Work {
   const root = this._internalRoot;
   const work = new ReactWork();
@@ -1125,7 +1125,12 @@ ReactRoot.prototype.render = function(
   if (callback !== null) {
     work.then(callback);
   }
-  DOMRenderer.updateContainer(children, root, null, work._onCommit);
+  DOMRenderer.updateContainer(
+    children, // 虚拟dom树
+    root, // FiberRoot 对象
+    null, // 父组件 这里为 null
+    work._onCommit
+  );
   return work;
 };
 
@@ -1147,7 +1152,12 @@ ReactRoot.prototype.legacy_renderSubtreeIntoContainer = function(
   if (callback !== null) {
     work.then(callback);
   }
-  DOMRenderer.updateContainer(children, root, parentComponent, work._onCommit);
+  DOMRenderer.updateContainer(
+    children, // 虚拟dom树
+    root, // FiberRoot 对象
+    parentComponent, // 父组件
+    work._onCommit
+  );
   return work;
 };
 ReactRoot.prototype.createBatch = function(): Batch {
@@ -1451,7 +1461,7 @@ export function updateContainerAtExpirationTime(
   container: OpaqueRoot, // ReactDOM.render函数的第二个参数，也就是一个元素节点
   parentComponent: ?React$Component<any, any>,   // parentComponent为之前的根组件，现在它为null
   expirationTime: ExpirationTime, // 期望的任务到期时间
-  callback: ?Function,
+  callback: ?Function, // 回调函数
 ) {
   // TODO: If this is a nested container, this won't be the root.
   // 引用fiber对象
@@ -1473,7 +1483,7 @@ export function updateContainerAtExpirationTime(
     current, // fiber对象
     element, // ReactDOM.render函数的第一个参数，泛指各种虚拟DOM
     expirationTime, // 期望的任务到期时间
-    callback
+    callback // 回调函数
   );
 }
 
@@ -1513,8 +1523,8 @@ function getContextForSubtree(
 function scheduleRootUpdate(
   current: Fiber, // 引用fiber对象
   element: ReactNodeList, // 虚拟dom树
-  expirationTime: ExpirationTime, // 更新优先级
-  callback: ?Function,
+  expirationTime: ExpirationTime, // 任务到期时间
+  callback: ?Function, // 回调函数
 ) {
   if (__DEV__) {
     // ...
@@ -1539,8 +1549,11 @@ function scheduleRootUpdate(
   }
   // 开始队列更新
   enqueueUpdate(current, update); 
-  // 执行队列
-  scheduleWork(current, expirationTime);
+  // 调用调度器API：scheduleWork(...)来调度fiber任务
+  scheduleWork(
+    current, // fiber实例
+    expirationTime // 任务到期时间
+  );
   return expirationTime;
 }
 
@@ -1692,6 +1705,7 @@ function appendUpdateToQueue<State>(
 我们找到`scheduleWork`，源码在`packages/react-reconciler/src/ReactFiberScheduler.js`中：
 ``` typescript
 function scheduleWork(fiber: Fiber, expirationTime: ExpirationTime) {
+  // 记录调度器的执行状态
   recordScheduleUpdate();
 
   if (__DEV__) {
@@ -1790,16 +1804,19 @@ function scheduleWorkToRoot(fiber: Fiber, expirationTime): FiberRoot | null {
     fiber.expirationTime = expirationTime;
   }
   let alternate = fiber.alternate;
+  // 同时更新alternate fiber的到期时间
   if (
     alternate !== null &&
     (alternate.expirationTime === NoWork ||
       alternate.expirationTime > expirationTime)
   ) {
+    // 若alternate fiber到期时间大于期望的任务到期时间，则更新fiber到期时间
     alternate.expirationTime = expirationTime;
   }
-  // Walk the parent path to the root and update the child expiration time.
   let node = fiber.return;
+  // fiber.return 为空，说明到达组件树顶部
   if (node === null && fiber.tag === HostRoot) {
+    // 确保是组件树根组件并获取FiberRoot实例
     return fiber.stateNode;
   }
   while (node !== null) {
