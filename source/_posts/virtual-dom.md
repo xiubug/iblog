@@ -1,8 +1,8 @@
 ---
 title: 虚拟dom
 tags:
-  - 默认标签
+  - react
 categories:
-  - 默认分类
+  - javascript
 date: 2018-04-30 22:22:07
 ---
