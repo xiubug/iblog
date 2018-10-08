@@ -13,7 +13,7 @@ categories:
 
 之前查阅了package.json的[文档](https://docs.npmjs.com/files/package.json)，并没有找到我们想要的 module 字段的定义，无意中看了一个帖子才知道它是 rollup 中最早就提出的概念 --- [pkg.module](https://github.com/rollup/rollup/wiki/pkg.module)。在这之前 npm 包大都是基于 CommonJS 规范的。当我们当 require 引入包的时候，就会根据 main 字段去查找入口文件。
 
-而在 ES6 规范出现后，ES6 定义了一套基于 import、export 操作符的模块规范。它与 CommonJS 规范最大的区别在 ES6 中的 import 和 export 都是静态的。静态意味着一个模块要暴露或引入的所有方法在编译阶段就能全部确定，之后不能再改变。这样做的好处就是打包工具在打包阶段就可以分析出代码中用到了某个模块中的哪几个方法。其它没有用到的方法就可以从最终的 bundle 文件中剔除掉。这样既可以减少 bundle 文件的大小，又可以提高脚本的执行速度。这个机制被称为 Tree Shaking。在这个构建思想的基础上，开发基于 ES Module 规范的包是很有必要的。
+而在 ES6 规范出现后，ES6 定义了一套基于 import、export 操作符的模块规范。它与 CommonJS 规范最大的区别在于 ES6 中的 import 和 export 都是静态的。静态意味着一个模块要暴露或引入的所有方法在编译阶段就能全部确定，之后不能再改变。这样做的好处就是打包工具在打包阶段就可以分析出代码中用到了某个模块中的哪几个方法。其它没有用到的方法就可以从最终的 bundle 文件中剔除掉。这样既可以减少 bundle 文件的大小，又可以提高脚本的执行速度。这个机制被称为 Tree Shaking。在这个构建思想的基础上，开发基于 ES Module 规范的包是很有必要的。
 
 之前我们说过 CommonJS 规范的包都是以 main 字段表示入口文件了，如果 ES Module 的也用 main 字段，就会对使用者造成困扰，如果他的项目不支持打包构建，比如大多数 node 项目(尽管 node9+ 支持 ES Module)，这时库开发者的模块系统跟项目构建的模块系统的冲突，更像是一种规范上的问题。况且目前大部分仍是采用 CommonJS，所以 rollup 便使用了另一个字段：module。如下配置：
 ``` json
