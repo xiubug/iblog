@@ -891,6 +891,210 @@ console.log(renderer.toJSON());
 
 那么至此，我们应该对 React 是什么有一个直观的认识，它本质上是含有诸多属性的JavaScript对象，它核心内容只涉及如何定义组件，具体的组件渲染（即输出用户界面），需要引入额外的渲染模块，渲染组件方式由环境决定，定义组件，组件状态管理，生命周期方法管理，组件更新等应该跨平台一致处理，不受渲染环境影响，这部分内容统一由调和器（Reconciler）处理，不同渲染器都会使用该模块。调和器主要作用就是在组件状态变更时，调用组件树各组件的render方法，渲染，卸载组件。至于 React 能做什么，它是怎么做的，我们会在后面的章节一一剖析它们。
 
+## 基本概念
+
+在正式进入流程分析之前，我们先来了解一些 React 源码内部的基本概念，读懂这些有助于我们更好地理解整个流程。
+
+### ReactElement
+我们在写 React 组件时，通常会使用JSX来描述组件，经过babel（Facebook早期是有提供自己的编译器的，后来Babel发展为社区主要的jsx语法编译的工具）编译成对应的`React.createElement(type, props, children)`形式，其中参数`type`会有两种类型：function、string。而这个方法，最终返回一个 ReactElement。
+ReactElement是描述react中虚拟DOM节点的对象，ReactElement主要包含了对象类型标识（$$typeof）、DOM节点的类型（type）和属性（props），这里只包含了DOM节点的数据，还没有注入对应的一些方法来完成React框架的功能。
+
+| key      | type        | desc|
+| ------   | ------     |  ------     | 
+| $$typeof | Symbol &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Number | 对象类型标识，用于判断当前Object属于哪一种类型的ReactElement |
+| type     | Function &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; String &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Symbol &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Number &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Object | 如果当前ReactElement是一个ReactComponent，那这里将是它对应的Constructor；而普通HTML标签，一般都是String|
+| props     | Object | ReactElement上的所有属性，包含children这个特殊属性|
+
+在[Babel](https://babeljs.io/repl/)官网上实验一下比较清楚：
+``` js
+class App extends Component {
+  render() {
+    return (
+      <div className="App">
+        <header className="App-header">
+          <img src={logo} className="App-logo" alt="logo" />
+          <p>
+            Edit <code>src/App.js</code> and save to reload.
+          </p>
+          <a
+            className="App-link"
+            href="https://reactjs.org"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Learn React
+          </a>
+        </header>
+        <Hello />
+        <Inner text="heiheihei">
+          <div>yoyoyo</div>
+        </Inner>
+      </div>
+    );
+  }
+}
+```
+Babel编译后：
+``` js
+React.createElement(
+  "div",
+  { className: "App" },
+  React.createElement(
+    "header",
+    { className: "App-header" },
+    React.createElement("img", { src: logo, className: "App-logo", alt: "logo" }),
+    React.createElement(
+      "p",
+      null,
+      "Edit ",
+      React.createElement(
+        "code",
+        null,
+        "src/App.js"
+      ),
+      " and save to reload."
+    ),
+    React.createElement(
+      "a",
+      {
+        className: "App-link",
+        href: "https://reactjs.org",
+        target: "_blank",
+        rel: "noopener noreferrer"
+      },
+      "Learn React"
+    )
+  ),
+  React.createElement(Hello, null),
+  React.createElement(
+    Inner,
+    { text: "heiheihei" },
+    React.createElement(
+      "div",
+      null,
+      "yoyoyo"
+    )
+  )
+);
+```
+可以看出我们使用JSX来编写的组件会被编译成调用React.createElement的形式。如果组件里的DOM标签的首字母为大写的时候，这个标签（类 => 自定义组件类， 函数 => 无状态组件）则会被作为参数传递给createElement；如果DOM标签的首字母为小写，则将标签名（div, span, a 等html的 DOM标签）以字符串的形式传给createElement；如果是字符串或者空的话，则直接将字符串或者null当做参数传递给createElement。
+
+React.createElement的源码（具体解释看注释）：
+``` js
+export function createElement(type, config, children) {
+  let propName;
+
+  // Reserved names are extracted
+  const props = {};
+
+  let key = null;
+  let ref = null;
+  let self = null;
+  let source = null;
+
+  // 将参数赋给props对象
+  if (config != null) {
+    if (hasValidRef(config)) {
+      ref = config.ref;
+    }
+    if (hasValidKey(config)) {
+      key = '' + config.key;
+    }
+
+    self = config.__self === undefined ? null : config.__self;
+    source = config.__source === undefined ? null : config.__source;
+    // Remaining properties are added to a new props object
+    for (propName in config) {
+      // 跳过React保留的参数
+      if (
+        hasOwnProperty.call(config, propName) &&
+        !RESERVED_PROPS.hasOwnProperty(propName)
+      ) {
+        props[propName] = config[propName];
+      }
+    }
+  }
+
+  // 将子元素按照顺序赋给children的数组
+  // Children can be more than one argument, and those are transferred onto
+  // the newly allocated props object.
+  const childrenLength = arguments.length - 2;
+  if (childrenLength === 1) {
+    props.children = children;
+  } else if (childrenLength > 1) {
+    const childArray = Array(childrenLength);
+    for (let i = 0; i < childrenLength; i++) {
+      childArray[i] = arguments[i + 2];
+    }
+    if (__DEV__) {
+      if (Object.freeze) {
+        Object.freeze(childArray);
+      }
+    }
+    props.children = childArray;
+  }
+
+  // 对于默认的参数，判断是否有传入值，有的话直接将参数和对应的值赋给props，否则将参数和参数默认值赋给props
+  // Resolve default props
+  if (type && type.defaultProps) {
+    const defaultProps = type.defaultProps;
+    for (propName in defaultProps) {
+      if (props[propName] === undefined) {
+        props[propName] = defaultProps[propName];
+      }
+    }
+  }
+  if (__DEV__) {
+    if (key || ref) {
+      const displayName =
+        typeof type === 'function'
+          ? type.displayName || type.name || 'Unknown'
+          : type;
+      if (key) {
+        defineKeyPropWarningGetter(props, displayName);
+      }
+      if (ref) {
+        defineRefPropWarningGetter(props, displayName);
+      }
+    }
+  }
+  return ReactElement(
+    type,
+    key,
+    ref,
+    self,
+    source,
+    ReactCurrentOwner.current,
+    props,
+  );
+}
+
+const ReactElement = function(type, key, ref, self, source, owner, props) {
+  const element = {
+    // Symbol类型的tag唯一标示这个对象是一个React Element类型
+    // This tag allows us to uniquely identify this as a React Element
+    $$typeof: REACT_ELEMENT_TYPE,
+
+    // Built-in properties that belong on the element
+    type: type,
+    key: key,
+    ref: ref,
+    props: props,
+
+    // Record the component responsible for creating this element.
+    _owner: owner,
+  };
+
+  return element;
+};
+```
+createElement基本没做什么特别的处理，返回了一个ReactElement对象。而该对象只是保存了DOM需要的数据，并没有对应的方法来实现React提供给我们的那些功能和特性。ReactElement主要分为DOM Elements和Component Elements两种，我们称这样的对象为ReactElement。
+
+### ReactComponent
+ReactComponent是基于ReactElement创建的一个对象，这个对象保存了ReactElement的数据的同时注入了一些方法，这些方法可以用来实现我们熟知的那些React的特性。
+
+### ReactClass
+ReactClass就是我们在写React的时候extends至React.Component类的自定义组件的类，如上述中的Inner，ReactClass实例化后调用render方法可返回ReactElement。
 ## 主要概念
 
 ### 首次渲染
