@@ -98,3 +98,11 @@ module.exports = {
 webpack --mode development
 webpack --mode production
 ```
+
+### loader 加载顺序
+loader 的加载顺序是从右往左的。为啥是从右往左，而不从左往右，那是因为Webpack选择了compose方式，而不是pipe的方式而已。
+``` js
+compose : require("style-loader!css-loader!sass-loader!./my-styles.sass");
+
+pipe : require("./my-styles.sass!sass-loader!css-loader!style-loader");
+```

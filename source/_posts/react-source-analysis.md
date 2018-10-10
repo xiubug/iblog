@@ -896,14 +896,7 @@ console.log(renderer.toJSON());
 在正式进入流程分析之前，我们先来了解一些 React 源码内部的基本概念，读懂这些有助于我们更好地理解整个流程。
 
 ### ReactElement
-我们在写 React 组件时，通常会使用JSX来描述组件，经过babel（Facebook早期是有提供自己的编译器的，后来Babel发展为社区主要的jsx语法编译的工具）编译成对应的`React.createElement(type, props, children)`形式，其中参数`type`会有两种类型：function、string。而这个方法，最终返回一个 ReactElement。
-ReactElement是描述react中虚拟DOM节点的对象，ReactElement主要包含了对象类型标识（$$typeof）、DOM节点的类型（type）和属性（props），这里只包含了DOM节点的数据，还没有注入对应的一些方法来完成React框架的功能。
-
-| key      | type        | desc|
-| ------   | ------     |  ------     | 
-| $$typeof | Symbol &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Number | 对象类型标识，用于判断当前Object属于哪一种类型的ReactElement |
-| type     | Function &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; String &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Symbol &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Number &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Object | 如果当前ReactElement是一个ReactComponent，那这里将是它对应的Constructor；而普通HTML标签，一般都是String|
-| props     | Object | ReactElement上的所有属性，包含children这个特殊属性|
+我们在写 React 组件时，通常会使用JSX来描述组件，经过babel（Facebook早期有提供自己的编译器，后来Babel发展为社区主要的jsx语法编译的工具）编译成对应的`React.createElement(type, props, children)`形式。
 
 在[Babel](https://babeljs.io/repl/)官网上实验一下比较清楚：
 ``` js
@@ -1088,13 +1081,69 @@ const ReactElement = function(type, key, ref, self, source, owner, props) {
   return element;
 };
 ```
-createElement基本没做什么特别的处理，返回了一个ReactElement对象。而该对象只是保存了DOM需要的数据，并没有对应的方法来实现React提供给我们的那些功能和特性。ReactElement主要分为DOM Elements和Component Elements两种，我们称这样的对象为ReactElement。
+createElement基本没做什么特别的处理，返回了一个ReactElement对象。
+ReactElement是描述DOM节点或component实例的字面级对象，ReactElement主要包含了对象类型标识（$$typeof）、DOM节点的类型（type）和属性（props）。
+
+| key      | type        | desc|
+| ------   | ------     |  ------     | 
+| $$typeof | Symbol &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Number | 对象类型标识，用于判断当前Object属于哪一种类型的ReactElement |
+| type     | Function &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; String &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Symbol &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Number &nbsp;&nbsp;&nbsp;&#124;&nbsp;&nbsp;&nbsp; Object | 如果当前ReactElement是一个ReactComponent，那这里将是它对应的Constructor；而普通HTML标签，一般都是String|
+| props     | Object | ReactElement上的所有属性，包含children这个特殊属性|
+
+ReactElement只是保存了DOM需要的数据，并没有对应的方法来实现React提供给我们的那些功能和特性。ReactElement主要分为DOM Elements和Component Elements两种，我们称这样的对象为ReactElement。
+
+**DOM Elements**
+当节点的type属性为字符串时，它代表是普通的节点，如div,span：
+``` json
+{
+  type: 'button',
+  props: {
+    className: 'button button-blue',
+    children: {
+      type: 'b',
+      props: {
+        children: 'OK!'
+      }
+    }
+  }
+}
+```
+**Component Elements**
+当节点的type属性为一个函数或一个类时，它代表自定义的节点：
+``` js
+class Button extends React.Component {
+  render() {
+    const { children, color } = this.props;
+    return {
+      type: 'button',
+      props: {
+        className: 'button button-' + color,
+        children: {
+          type: 'b',
+          props: {
+            children: children
+          }
+        }
+      }
+    };
+  }
+}
+// Component Elements
+{
+  type: Button,
+  props: {
+    color: 'blue',
+    children: 'OK!'
+  }
+}
+```
+
+### ReactClass
+ReactClass是平时我们写的Component组件(类或函数)，例如上面的Button类。ReactClass实例化后调用render方法可返回DOM Element。
 
 ### ReactComponent
 ReactComponent是基于ReactElement创建的一个对象，这个对象保存了ReactElement的数据的同时注入了一些方法，这些方法可以用来实现我们熟知的那些React的特性。
 
-### ReactClass
-ReactClass就是我们在写React的时候extends至React.Component类的自定义组件的类，如上述中的Inner，ReactClass实例化后调用render方法可返回ReactElement。
 ## 主要概念
 
 ### 首次渲染
