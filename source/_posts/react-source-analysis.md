@@ -896,9 +896,9 @@ console.log(renderer.toJSON());
 在正式进入流程分析之前，我们先来了解一些 React 源码内部的基本概念，读懂这些有助于我们更好地理解整个流程。
 
 ### ReactElement
-我们在写 React 组件时，通常会使用JSX来描述组件，经过babel（Facebook早期有提供自己的编译器，后来Babel发展为社区主要的jsx语法编译的工具）编译成对应的`React.createElement(type, props, children)`形式。
+我们在写 React 组件时，通常会使用JSX来描述组件，经过babel（Facebook早期有提供自己的编译器，后来Babel发展为社区jsx语法的主要编译工具）编译成对应的`React.createElement(type, props, children)`形式。
 
-在[Babel](https://babeljs.io/repl/)官网上实验一下比较清楚：
+将以下代码放到[Babel](https://babeljs.io/repl/)官网上编译一下：
 ``` js
 class App extends Component {
   render() {
@@ -927,7 +927,7 @@ class App extends Component {
   }
 }
 ```
-Babel编译后：
+经过Babel编译后：
 ``` js
 React.createElement(
   "div",
@@ -970,9 +970,9 @@ React.createElement(
   )
 );
 ```
-可以看出我们使用JSX来编写的组件会被编译成调用React.createElement的形式。如果组件里的DOM标签的首字母为大写的时候，这个标签（类 => 自定义组件类， 函数 => 无状态组件）则会被作为参数传递给createElement；如果DOM标签的首字母为小写，则将标签名（div, span, a 等html的 DOM标签）以字符串的形式传给createElement；如果是字符串或者空的话，则直接将字符串或者null当做参数传递给createElement。
+可以看出我们使用JSX来编写的组件会被编译成调用React.createElement的形式。如果组件里的DOM标签的首字母为大写的时候，这个标签（类 => 自定义组件类， 函数 => 无状态组件）则会被作为参数传递给createElement；如果DOM标签的首字母为小写，则将标签名（div, span, a 等html的 DOM标签）以字符串的形式传给createElement；如果是字符串或者空的话，则直接将字符串或者null当做参数传递给createElement。接下来我们React.createElement的源码。
 
-React.createElement的源码（具体解释看注释）：
+React.createElement的源码：
 ``` js
 export function createElement(type, config, children) {
   let propName;
@@ -1081,7 +1081,7 @@ const ReactElement = function(type, key, ref, self, source, owner, props) {
   return element;
 };
 ```
-createElement基本没做什么特别的处理，返回了一个ReactElement对象。
+我们可以看出createElement基本没做什么特别的处理，最终返回了一个ReactElement对象。
 ReactElement是描述DOM节点或component实例的字面级对象，ReactElement主要包含了对象类型标识（$$typeof）、DOM节点的类型（type）和属性（props）。
 
 | key      | type        | desc|
@@ -1093,7 +1093,7 @@ ReactElement是描述DOM节点或component实例的字面级对象，ReactElemen
 ReactElement只是保存了DOM需要的数据，并没有对应的方法来实现React提供给我们的那些功能和特性。ReactElement主要分为DOM Elements和Component Elements两种，我们称这样的对象为ReactElement。
 
 **DOM Elements**
-当节点的type属性为字符串时，它代表是普通的节点，如div,span：
+当节点的type属性为字符串时，它代表是普通的节点，如div，span：
 ``` json
 {
   type: 'button',
@@ -1139,10 +1139,12 @@ class Button extends React.Component {
 ```
 
 ### ReactClass
-ReactClass是平时我们写的Component组件(类或函数)，例如上面的Button类。ReactClass实例化后调用render方法可返回DOM Element。
+ReactClass就是我们平时写的Component组件(类或函数)，例如上面的Button类。ReactClass实例化后调用render方法可返回DOM Element。
 
 ### ReactComponent
 ReactComponent是基于ReactElement创建的一个对象，这个对象保存了ReactElement的数据的同时注入了一些方法，这些方法可以用来实现我们熟知的那些React的特性。
+
+### ReactRoot
 
 ## 主要概念
 
