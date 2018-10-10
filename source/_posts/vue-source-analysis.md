@@ -953,6 +953,17 @@ export function initGlobalAPI (Vue: GlobalAPI) {
 
 那么至此，我们应该对 Vue 是什么有一个直观的认识，它本质上就是一个用 Function 实现的 Class，然后在它的原型 prototype 以及它本身都扩展了一系列的方法和属性，至于 Vue 能做什么，它是怎么做的，我们会在后面的章节一一剖析它们。
 
+## 基础
+
+## 组件化
+在`Vue.js`中，除了它内置的组件如`keep-alive`、`component`、`transition`、`transition-group`等，其它自定义组件在使用前必须注册。我们在开发过程中可能会遇到如下报错信息：
+``` js
+'Unknown custom element: <xxx> - did you register the component correctly?
+ For recursive components, make sure to provide the "name" option.'
+```
+一般报这个错的原因都是我们使用了未注册的组件。Vue.js 提供了 2 种组件的注册方式：全局注册和局部注册。接下来我们从源码分析的角度来分析这两种注册方式。
+### 组件注册
+
 ## 本文不断更新中
 
 
