@@ -1,13 +1,13 @@
 ---
-title: webpack 使用指南
-date: 2018-07-13 22:11:50
+title: webpack 开发汇总
+date: 2018-05-08 22:11:50
 tags:
     - webpack
 categories:
     - webpack
 ---
 
-## 使用指南
+## 常见用法
 
 ### require.context
 **require.context：**创建自己的（模块）上下文，这个方法有 3 个参数：要搜索的文件夹目录，是否还应该搜索它的子目录，以及一个匹配文件的正则表达式。 
@@ -59,7 +59,7 @@ const models = context.keys().filter(item => item !== './index.js').map(context)
 ```
 
 
-## 问题指南
+## 常见问题
 
 ### webpack-cli（v4）
 
