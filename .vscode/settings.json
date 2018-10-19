@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "*.css": "postcss"
+    },
+    "emmet.includeLanguages": {
+      "vue-html": "html",
+      "javascript": "javascriptreact",
+      "postcss": "css"
+    }
+}

@@ -21,7 +21,7 @@
     "version": "3.7.1"
   },
   "scripts": {
-    "dev": "hexo clean && hexo s -p 8888",
+    "dev": "hexo clean && hexo s -p 9999",
     "build": "hexo clean && hexo d -g",
     "lint": "eslint --fix",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -w -r 0"
