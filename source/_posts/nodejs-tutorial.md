@@ -50,6 +50,16 @@ require()方法的坐标路径是：module.filename；fs.readFile()的坐标路�
 
 ## 常见问题
 
+### bash: /usr/local/bin: Permission denied
+原因：数据权限问题
+
+解决办法：
+``` bash
+$ sudo chmod 755 /usr/local/bin
+
+$ sudo chmod -R 755 /usr/local/bin # 递归下面
+```
+
 ### Node.js 连接MySQL时 出现 connect ECONNREFUSED 127.0.0.1:3306
 
 原因：数据库服务没有打开。
