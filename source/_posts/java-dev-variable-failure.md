@@ -4,7 +4,7 @@ date: 2018-07-09 13:00:01
 tags: 
     - java
 categories:
-    - java
+    - java笔记
 ---
 
 今天团队中一个同事搭建java开发环境，遇到了一个很奇怪的问题。在cmd中输入`java -version`会报如下错误:

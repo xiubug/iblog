@@ -4,7 +4,7 @@ date: 2018-05-12 21:05:14
 tags: 
     - eslint
 categories:
-    - eslint
+    - 前端规范
 ---
 
 ## 前言

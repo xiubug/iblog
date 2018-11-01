@@ -1,10 +1,10 @@
 ---
 title: 每天两分钟，了解一个流行 NPM 库
-date: 2018-06-01 22:43:07
 tags:
-    - resources
+  - npm
 categories:
-    - programm
+  - node教程
+date: 2018-06-01 22:43:07
 ---
 
 每天两分钟，了解一个流行NPM库，废话少说，直接上npm库。

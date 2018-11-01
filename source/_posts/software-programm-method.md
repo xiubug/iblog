@@ -4,7 +4,7 @@ date: 2018-07-12 22:31:30
 tags:
     - programm
 categories:
-    - programm
+    - 软件编程
 ---
 
 ## 编程范式

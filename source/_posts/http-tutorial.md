@@ -3,7 +3,7 @@ title: 揭秘 http
 tags:
   - http
 categories:
-  - javascript
+  - 前端教程
 date: 2018-10-30 11:34:58
 ---
 

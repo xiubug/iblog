@@ -4,7 +4,7 @@ date: 2018-05-01 23:56:07
 tags:
     - npm
 categories:
-    - nodejs
+    - node教程
 ---
 我们经常发现项目的依赖包版本号前面有的是 ~，有的是 ^，我们以 angular 为例：
 

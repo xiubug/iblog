@@ -4,7 +4,7 @@ date: 2018-07-30 23:40:01
 tags:
     - async
 categories:
-    - javascript
+    - 前端教程
 ---
 ## 背景
 

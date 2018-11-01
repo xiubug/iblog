@@ -3,7 +3,7 @@ title: 巧用 JS 位运算
 tags:
   - javascript
 categories:
-  - javascript
+  - 前端教程
 date: 2018-10-09 22:08:44
 ---
 

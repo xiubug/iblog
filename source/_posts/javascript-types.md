@@ -4,7 +4,7 @@ date: 2018-07-29 21:20:29
 tags:
     - types
 categories:
-    - javascript
+    - 前端教程
 ---
 
 ## 概述

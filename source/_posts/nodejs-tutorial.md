@@ -3,7 +3,7 @@ title: nodejs 开发汇总
 tags:
   - nodejs
 categories:
-  - nodejs
+  - node教程
 date: 2018-04-28 22:10:50
 ---
 ## 前言

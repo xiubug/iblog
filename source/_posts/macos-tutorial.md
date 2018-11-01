@@ -4,7 +4,7 @@ date: 2018-08-11 07:25:20
 tags:
     - mac
 categories:
-    - mac
+    - mac笔记
 ---
 
 Mac OS是一套运行于苹果Macintosh系列电脑上的操作系统。Mac OS是首个在商用领域成功的图形用户界面操作系统。现行的最新的系统版本是OS X 10.12 ，且网上也有在PC上运行的Mac系统，简称 Mac PC。

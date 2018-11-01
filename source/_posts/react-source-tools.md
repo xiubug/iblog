@@ -4,7 +4,7 @@ date: 2018-08-30 20:10:11
 tags:
     - react
 categories:
-    - react
+    - 前端教程
 uncr: true
 ---
 

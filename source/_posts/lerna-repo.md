@@ -4,7 +4,7 @@ date: 2018-07-21 20:55:06
 tags:
     - lerna
 categories:
-    - lerna
+    - 前端架构
 ---
 
 ## 背景

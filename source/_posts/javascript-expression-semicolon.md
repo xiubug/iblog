@@ -4,7 +4,7 @@ date: 2018-08-14 22:08:22
 tags:
     - javascript
 categories:
-    - javascript
+    - 前端教程
 ---
 
 我们在看源代码时，我们经常会发现有的源代码 Javascript 表达式后面加了分号，有的却没有加，难免心中产生疑惑：Javascript 表达式后面到底该不该加分号呢？

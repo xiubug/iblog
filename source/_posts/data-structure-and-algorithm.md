@@ -5,7 +5,7 @@ tags:
     - data structure
     - algorithm
 categories:
-    - javascript
+    - 数据结构与算法
 ---
 ## 数组
 数组的标准定义是：一个存储元素的线性集合（collection），元素可以通过索引来任意存取，索引通常是数字，用来计算元素之间存储位置的偏移量。几乎所有的编程语言都有类似的数据结构。然而 JavaScript 的数组却略有不同。

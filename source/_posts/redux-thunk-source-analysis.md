@@ -2,9 +2,9 @@
 title: redux-thunk 源码全方位剖析
 date: 2018-09-09 20:59:49
 tags:
-    - middleware
+    - redux-thunk
 categories:
-    - redux
+    - 源码教程
 ---
 
 ### 前言

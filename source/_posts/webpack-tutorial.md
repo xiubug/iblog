@@ -4,7 +4,7 @@ date: 2018-05-08 22:11:50
 tags:
     - webpack
 categories:
-    - webpack
+    - webpack笔记
 ---
 
 ## 常见用法

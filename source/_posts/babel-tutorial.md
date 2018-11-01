@@ -1,10 +1,10 @@
 ---
-title: babel 使用指南
+title: babel 开发汇总
 date: 2018-04-08 21:00:21
 tags:
     - babel
 categories:
-    - babel
+    - 前端笔记
 ---
 
 ## 问题指南

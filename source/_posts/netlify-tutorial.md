@@ -4,7 +4,7 @@ date: 2018-07-02 10:40:48
 tags:
     - netlify
 categories:
-    - netlify
+    - 前端构建
 ---
 
 [官网](https://www.netlify.com/)

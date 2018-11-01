@@ -3,7 +3,7 @@ title: vscode 使用汇总
 tags:
   - vscode
 categories:
-  - vscode
+  - 工具笔记
 date: 2018-05-05 22:44:10
 ---
 ## 基本使用

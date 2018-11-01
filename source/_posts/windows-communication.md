@@ -4,7 +4,7 @@ date: 2018-04-20 19:35:04
 tags:
     - javascript
 categories:
-    - javascript
+    - 前端教程
 ---
 
 ### localStorage

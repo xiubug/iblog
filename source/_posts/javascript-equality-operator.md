@@ -4,7 +4,7 @@ date: 2018-07-26 22:50:45
 tags:
     - equality
 categories:
-    - javascript
+    - 前端教程
 ---
 
 ## 概述

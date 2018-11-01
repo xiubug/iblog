@@ -4,7 +4,7 @@ date: 2018-07-01 21:20:27
 tags:
     - setTimeout
 categories:
-    - javascript
+    - 前端教程
 ---
 
 ## 基本使用

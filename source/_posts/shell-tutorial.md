@@ -3,7 +3,7 @@ title: Shell 开发汇总
 tags:
   - shell
 categories:
-  - shell
+  - shell笔记
 date: 2018-10-31 21:09:06
 ---
 

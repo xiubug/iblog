@@ -4,7 +4,7 @@ date: 2018-06-27 20:55:16
 tags:
     - react-redux
 categories:
-    - react-redux
+    - 源码教程
 ---
 
 ### 前言

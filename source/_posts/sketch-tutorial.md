@@ -3,7 +3,7 @@ title: Sketch 教程
 tags:
   - sketch
 categories:
-  - sketch
+  - 设计教程
 date: 2018-10-19 20:03:00
 ---
 

@@ -4,7 +4,7 @@ date: 2018-08-04 23:04:53
 tags:
     - rollup
 categories:
-    - rollup
+    - 前端构建
 ---
 
 `版本：v0.63.5。`

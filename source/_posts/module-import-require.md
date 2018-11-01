@@ -4,7 +4,7 @@ date: 2018-07-05 20:55:39
 tags:
     - module
 categories:
-    - javascript
+    - 前端教程
 ---
 
 ## 前言
