@@ -1,5 +1,5 @@
 ---
-title: Jest 开发汇总
+title: Jest 开发笔记
 tags:
   - note
 categories:
@@ -22,3 +22,5 @@ Jest是由Facebook发布的开源的、基于Jasmine的JavaScript单元测试框
 * 集成了断言库，不需要再引入第三方的断言库，并且非常完美的支持React组件化测试。
 
 ###  命令行参数
+
+
