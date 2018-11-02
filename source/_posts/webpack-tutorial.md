@@ -2,12 +2,12 @@
 title: webpack 开发汇总
 date: 2018-05-08 22:11:50
 tags:
-    - webpack
+  - note
 categories:
-    - webpack笔记
+  - webpack
 ---
 
-## 常见用法
+## webpack 教程
 
 ### require.context
 **require.context：**创建自己的（模块）上下文，这个方法有 3 个参数：要搜索的文件夹目录，是否还应该搜索它的子目录，以及一个匹配文件的正则表达式。 
@@ -214,6 +214,98 @@ process.env.NODE_ENV 的值是(webpack.config.prod.js)：production
 app test 
 process.env.NODE_ENV 的值是(app.js)：production
 ```
+
+### Webpack Code Splitting 
+
+首先说，code splitting指什么。我们打包时通常会生成一个大的bundle.js(或者index,看你如何命名)文件，这样所有的模块都会打包到这个bundle.js文件中，最终生成的文件往往比较大。code splitting就是指将文件分割为块(chunk)，webpack使我们可以定义一些分割点(split point)，根据这些分割点对文件进行分块，并实现按需加载。
+
+#### code splitting的意义
+
+1、第三方类库单独打包。由于第三方类库的内容基本不会改变，可以将其与业务代码分离出来，这样就可以将类库代码缓存在客户端，减少请求。
+2、按需加载。webpack支持定义分割点，通过require.ensure进行按需加载。
+3、通用模块单独打包。我们代码中可能会有一些通用模块，比如弹窗、分页、通用的方法等等。其他业务代码模块常常会有引用这些通用模块。若按照2中做，则会造成通用模块重复打包。这时可以将通用模块单独打包出来。
+
+#### 如何进行code spliting
+
+##### 第三方类库
+
+我们项目中常常会用到一些第三方的类库，比如jquery,bootstrap等。可以配置多入口来将第三方类库单独打包，如下：
+
+```javascript
+//在entry中添加入口
+entry: {
+  index: './index',
+  vendor: ['jquery', 'bootstrap']
+},
+
+//在plugins中配置
+plugins: [
+  new webpack.optimize.CommonsChunkPlugin("vendor", "vendor.bundle.js"),
+]
+```
+
+**说明 **
+CommonsChunkPlugin提供两个参数，第一个参数为对应的chunk名（chunk指文件块，对应entry中的属性名），第二个参数为生成的文件名。
+这个插件做了两件事：
+1、将vendor配置的模块（jquery,bootstrap）打包到vendor.bundle.js中。
+2、将index中存在的jquery, bootstrap模块从文件中移除。这样index中则只留下纯净的业务代码。
+
+##### 按需加载
+
+以基于backbone的单页面应用为例，可以在router中进行配置实现按需加载，如下：
+
+```javascript
+
+// router.js
+
+var Router = Backbone.Router.extend({
+  routes: {
+    'a': 'a',
+    'b': 'b'
+  },
+  
+  a: function() {
+    require.ensure(['./a'], (require) => {
+      let a = require('./a');
+      //do something
+    })
+  },
+  
+  b: function() {
+    require.ensure(['./b'], (require) => {
+      let b = require('./b');
+      //do something
+    })
+  }
+})
+```
+
+**说明**
+如上方式将打出两个文件，a.js和b.js（当然名字会有所不同），且为按需加载。只有在访问a时，a.js才会被加载，b同理。但是这种做法存在两个问题：
+1、若路由分配不合理，会打包出很多很小的文件，每个文件或许只有几k，却多了很多网络请求，得不偿失。
+2、会造成通用模块的重复打包，比如a模块和b模块都引用了c模块，
+
+```javascript
+// a
+import 'c' from './c'
+
+// b
+import 'c' from './c'
+```
+
+这样我们会发现打包出的a.js和b.js中都包含c模块的代码，造成了代码冗余。
+
+对于问题1，可以通过webpack提供的插件来解决：
+
+```javascript
+//在plugins中添加该插件：
+plugins: [
+  new webpack.optimize.AggressiveMergingPlugin()
+]
+```
+
+对于问题2:
+可以按照下文中所说方式解决。
 
 ## 常见问题
 

@@ -1,8 +1,8 @@
 ---
 title: 虚拟dom
 tags:
-  - react
+  - virtual dom
 categories:
-  - 前端教程
+  - react
 date: 2018-04-30 22:22:07
 ---

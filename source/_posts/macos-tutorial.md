@@ -2,9 +2,9 @@
 title: Mac OS系统使用指南
 date: 2018-08-11 07:25:20
 tags:
-    - mac
+  - note
 categories:
-    - mac笔记
+  - Mac OS
 ---
 
 Mac OS是一套运行于苹果Macintosh系列电脑上的操作系统。Mac OS是首个在商用领域成功的图形用户界面操作系统。现行的最新的系统版本是OS X 10.12 ，且网上也有在PC上运行的Mac系统，简称 Mac PC。
@@ -46,6 +46,73 @@ $ control + d
 # 凡是前面带有小点的隐藏文件，或者是显示淡蓝色的文件都是隐藏文件
 $ shift + cmmand + .
 ```
+
+### mac os 获取root/su/sudo权限的方法
+
+方法一：  打开终端， 输入sudo -i ,  按照提示输入当前管理员用户密码，即可进入root权限
+
+### mac os 从root账户切换到普通账户
+
+方法一：  打开终端， 输入su - test ,  即可进入test权限
+
+### 如何解除mac上不能安装不明开发者的软件
+
+打开 「Launchpad」 - 「实用工具」 - 「终端」；你在终端里输入
+
+```bash
+$ sudo spctl --master-disable
+```
+
+输入password（开机密码），输完敲回车；“任何来源”就会显示了，然后勾选你要的选项；
+
+### mysql登录退出命令
+
+登录Mysql：“输入mysql -u帐号 -p密码 这是登陆
+
+mysql退出：mysql > exit;
+
+以下是实例参考下：
+
+登录Mysql：“输入mysql -uroot -p -P3306 -h127.0.0.1”
+
+表示超级用户名root,密码稍后输入，端口号3306（不输入P默认为3306），
+
+主机地址127.0.0.1（若使用本机作为主机，h默认127.0.0.1）
+
+mysql退出三种方法：
+
+mysql > exit;
+
+mysql > quit;
+
+mysql > \q;
+
+### mysql连接错误如下：ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/tmp/mysql.sock' (2)
+
+1. 确保环境没有mysql
+``` bash
+$ brew remove mysql
+
+$ brew cleanup
+```
+
+2. 安装 
+``` bash
+$ brew install mysql
+```
+
+3. 启动
+```bash
+$ brew services start mysql
+```
+设置开机启动: launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mysql.plist (设置启动的命令可以通过 brew info mysql获得)
+
+4.登录
+``` bash
+$ mysql -uroot
+```
+
+
 
 
 

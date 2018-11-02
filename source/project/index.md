@@ -19,6 +19,16 @@ categories:
 
 ## 前端
 
+### zanm
+
+#### 项目简介
+
+一套基于 Vue.js 的移动端组件库
+
+#### 项目地址
+
+[zanm](https://github.com/meitianyitan/zanm)
+
 ### react-antd
 
 #### 项目简介
@@ -39,7 +49,7 @@ categories:
 
 [vue2-element](https://github.com/sosout/vue2-element)
 
-### Mnte
+### mnte
 
 #### 项目简介
 
@@ -47,7 +57,7 @@ categories:
 
 #### 项目地址
 
-[Mnte](https://github.com/Zilean/Mnte)
+[mnte](https://github.com/sosout/mnte)
 
 ### react-antd-dva
 

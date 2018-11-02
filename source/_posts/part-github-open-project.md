@@ -1,9 +1,9 @@
 ---
 title: 参与一个 GitHub 开源项目
 tags:
-  - github
+  - open
 categories:
-  - 项目管理
+  - github
 date: 2018-11-01 20:43:12
 ---
 

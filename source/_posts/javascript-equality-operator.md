@@ -2,9 +2,9 @@
 title: javascript 相等运算符
 date: 2018-07-26 22:50:45
 tags:
-    - equality
+    - Equality operator
 categories:
-    - 前端教程
+    - javascript
 ---
 
 ## 概述

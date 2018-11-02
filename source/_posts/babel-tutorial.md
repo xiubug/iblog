@@ -2,9 +2,9 @@
 title: babel 开发汇总
 date: 2018-04-08 21:00:21
 tags:
-    - babel
+  - note
 categories:
-    - 前端笔记
+  - babel
 ---
 
 ## 问题指南

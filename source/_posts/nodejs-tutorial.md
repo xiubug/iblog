@@ -1,9 +1,9 @@
 ---
 title: nodejs 开发汇总
 tags:
-  - nodejs
+  - note
 categories:
-  - node教程
+  - nodejs
 date: 2018-04-28 22:10:50
 ---
 ## 前言

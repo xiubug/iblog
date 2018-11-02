@@ -2,9 +2,9 @@
 title: Commit message 和 Change log 编写指南
 date: 2018-08-07 19:40:44
 tags:
-    - git
+  - commit message
 categories:
-    - 项目管理
+  - git
 ---
 
 Git 每次提交代码，都要编写 Commit message（提交说明），否则就不允许提交。

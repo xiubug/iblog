@@ -2,9 +2,9 @@
 title: javascript 数据类型
 date: 2018-07-29 21:20:29
 tags:
-    - types
+  - types
 categories:
-    - 前端教程
+  - javascript
 ---
 
 ## 概述

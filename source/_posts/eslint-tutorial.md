@@ -1,10 +1,10 @@
 ---
-title: ESlint 全面解读
+title: ESlint 开发汇总
 date: 2018-05-12 21:05:14
 tags: 
-    - eslint
+    - note
 categories:
-    - 前端规范
+    - eslint
 ---
 
 ## 前言
@@ -58,3 +58,86 @@ $ npm install babel-eslint --save-dev
 ```
 在`eslint`的配置文件中增加`"parser": "babel-eslint"`。
 
+### Do not use 'new' for side effects
+
+代码如下：
+```javascript
+new Vue({
+  el: '#app',
+  router,
+  template: '<App/>',
+  components: { App }
+})
+```
+
+报错：
+
+![not-use-new.png](/images/eslint-tutorial/not-use-new.png)
+
+原因：刪除了以下注释。这句注释可以绕过规则检测：
+
+```javascript
+/* eslint-disable no-new */
+```
+
+在new Vue()上方加上句注釋即可：
+```javascript
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  router,
+  template: '<App/>',
+  components: { App }
+})
+```
+
+### vue-cli构建的项目，eslint一直报CRLF/LF的linebreak错误
+
+如题，vue在构建项目的时候选择了airbnb规则，同时项目构建后被windows的unix bash工具pull并且push过，这之后在windows上进行开发，就开始一直报
+
+```javascript
+Expected linebreaks to be 'CRLF' but found 'LF'
+```
+
+这样的错误，后经查是一种强制统一方式，并且解决方法是
+
+```javascript
+linebreak-style: ["error", "windows"]
+```
+
+强制使用windows方式，我将之添加到了项目根目录下的 .eslintrc.js 文件中的rule字段下：
+```javascript
+// add your custom rules here
+  'rules': {
+    // don't require .vue extension when importing
+    'import/extensions': ['error', 'always', {
+      'js': 'never',
+      'vue': 'never'
+    }],
+    // allow optionalDependencies
+    'import/no-extraneous-dependencies': ['error', {
+      'optionalDependencies': ['test/unit/index.js']
+    }],
+    // try to fix the line break problem
+    'linebreak-style': ["error", "windows"],
+    // allow debugger during development
+    'no-debugger': process.env.NODE_ENV === 'production' ? 2 : 0
+  }
+```
+
+结果无效，现有问题二个：
+* 是否是因为系统环境不同而造成了某种强制转换才会引发如上的错误？
+* 如何选择性的关闭eslint某个功能（linebreak检查）？
+
+问题1:
+*不同的操作系统下，甚至是不同编辑器，不同工具处理过的文件可能都会导致换行符的改变。
+
+
+问题2：
+* 项目根目录下有.eslintrc.js文件，在配置文件中修改rule配置项，如下：
+
+```javascript
+// 统一换行符，"\n" unix(for LF) and "\r\n" for windows(CRLF)，默认unix
+// off或0: 禁用规则
+'linebreak-style': 'off'
+```

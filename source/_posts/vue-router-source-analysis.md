@@ -1,8 +1,8 @@
 ---
 title: vue-router-source-analysis
 tags:
-  - vue-router
+  - source
 categories:
-  - 源码教程
+  - vue-router
 date: 2018-04-10 0:08:19
 ---

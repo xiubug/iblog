@@ -2,9 +2,9 @@
 title: danger 入门教程
 date: 2018-07-14 22:57:12
 tags:
-    - danger
+    - note
 categories:
-    - 前端构建
+    - danger
 ---
 
 ## 背景

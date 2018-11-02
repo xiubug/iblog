@@ -1,9 +1,9 @@
 ---
 title: 巧用 JS 位运算
 tags:
-  - javascript
+  - 位运算
 categories:
-  - 前端教程
+  - javascript
 date: 2018-10-09 22:08:44
 ---
 

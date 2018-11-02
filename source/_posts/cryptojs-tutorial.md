@@ -2,9 +2,9 @@
 title: 前端加密JS库--CryptoJS 使用指南
 date: 2018-09-05 22:07:39
 tags:
-    - cryptojs
+  - cryptojs
 categories:
-    - 前端安全
+  - javascript
 ---
 
 有时候项目涉及到的敏感数据比较多，为了信息安全，我们常常需要对一些数据进行接口加密处理，如编码、将明文转化为暗文、加密比对、AES + BASE64 算法加密等。

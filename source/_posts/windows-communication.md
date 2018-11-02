@@ -2,9 +2,9 @@
 title: 跨页面通信的几种方法
 date: 2018-04-20 19:35:04
 tags:
-    - javascript
+  - communication
 categories:
-    - 前端教程
+  - javascript
 ---
 
 ### localStorage

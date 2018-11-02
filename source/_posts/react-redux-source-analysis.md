@@ -2,9 +2,9 @@
 title: react-redux 源码全方位剖析
 date: 2018-06-27 20:55:16
 tags:
-    - react-redux
+  - source
 categories:
-    - 源码教程
+  - redux
 ---
 
 ### 前言

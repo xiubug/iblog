@@ -2,9 +2,9 @@
 title: webpack 打包后文件分析
 date: 2018-07-23 07:19:45
 tags:
-    - webpack
+    - analysis package
 categories:
-    - webpack教程
+    - webpack
 ---
 
 `版本：v4.17.1`

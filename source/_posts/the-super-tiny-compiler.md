@@ -2,9 +2,9 @@
 title: 有史以来最小的编译器源码解析
 date: 2018-09-14 06:30:22
 tags:
-    - the-super-tiny-compiler
+  - source
 categories:
-    - 源码教程
+  - the-super-tiny-compiler
 ---
 [the-super-tiny-compiler](https://github.com/jamiebuilds/the-super-tiny-compiler)
 [详细中文注释 the-super-tiny-compiler](https://github.com/sosout/astc)

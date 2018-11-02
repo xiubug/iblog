@@ -2,9 +2,9 @@
 title: 软件编程
 date: 2018-07-12 22:31:30
 tags:
-    - programm
+  - note
 categories:
-    - 软件编程
+  - programm
 ---
 
 ## 编程范式

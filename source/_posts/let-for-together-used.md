@@ -2,9 +2,9 @@
 title: 由 let 和 for 引起的血案 
 date: 2018-08-16 20:17:19
 tags:
-    - let
+  - let
 categories:
-    - 前端教程
+  - javascript
 ---
 
 这是一道出自 HTTP 203 的 JS 题目。HTTP 203 是 Youtube 上的一个栏目，主要讲一些有趣的知识。

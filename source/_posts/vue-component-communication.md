@@ -1,9 +1,9 @@
 ---
 title: Vue.js 组件间通信方式
 tags:
-  - vue
+  - component
 categories:
-  - 前端教程
+  - vue
 date: 2018-04-25 21:27:06
 ---
 > Vue 组件通信包括：父子组件和兄弟组件间的通信。在组件化系统构建中，组件间通信必不可少的。

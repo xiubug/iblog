@@ -1,9 +1,9 @@
 ---
 title: Shell 开发汇总
 tags:
-  - shell
+  - note
 categories:
-  - shell笔记
+  - shell
 date: 2018-10-31 21:09:06
 ---
 

@@ -2,9 +2,9 @@
 title: javascript 函数
 date: 2018-07-24 21:02:47
 tags:
-    - function
+  - function
 categories:
-    - 前端教程
+  - javascript
 ---
 
 函数是一段可以反复调用的代码块。函数还能接受输入的参数，不同的参数会返回不同的值。

@@ -2,9 +2,9 @@
 title: package.json 文件中的 module 字段
 date: 2018-08-08 23:47:07
 tags:
-    - npm
+  - package.json
 categories:
-    - node教程
+  - nodejs
 ---
 
 通常基于 NPM 托管的项目都会有一个 package.json 文件，它是项目的描述文件，它的内容是一个标准的 JSON 对象。相信大家对 package.json 常用配置肯定熟悉的不能再熟悉了，例如项目名称（name）、项目版本号（version）、项目描述 （description）、npm 命令（scripts）等等，而我们今天主要聊聊`pkg.module`字段的功能以及使用场景。

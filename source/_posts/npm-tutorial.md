@@ -3,7 +3,7 @@ title: 每天两分钟，了解一个流行 NPM 库
 tags:
   - npm
 categories:
-  - node教程
+  - nodejs
 date: 2018-06-01 22:43:07
 ---
 

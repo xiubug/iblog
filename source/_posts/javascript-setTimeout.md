@@ -2,9 +2,9 @@
 title: 深入探究 setTimeout
 date: 2018-07-01 21:20:27
 tags:
-    - setTimeout
+  - setTimeout
 categories:
-    - 前端教程
+  - javascript
 ---
 
 ## 基本使用
@@ -210,3 +210,161 @@ test2
 
 会发现，当第一个参数为函数时，回调函数执行完毕后，test1函数被销毁，其所使用内存也被释放；当第一个参数为字符串时，test2却始终存在，它没有被销毁，始终占据着内存，也就造成了内存泄漏，所以让我们需要使用 setTimeout时，一定要注意，第一个参数必须传入一个函数。
 
+
+## 面试题
+以下代码的运行结果：
+### 题目一：
+```javascript
+for (var i = 0; i < 5; i++) {
+  setTimeout(function() {
+    console.log(i);
+  }, 1000);
+}
+
+console.log(i);
+```
+
+运行结果：
+```javascript
+5
+5
+5
+5
+5
+5
+```
+
+### 题目二：
+```javascript
+for (var i = 0; i < 3; i++) {
+	setTimeout(function() {
+		console.log(i);
+	}, 0);
+	console.log(i);
+}
+```
+
+运行结果：
+```javascript
+0
+1
+2
+3
+3
+3
+```
+
+我们来简化此题：
+```javascript
+setTimeout(function() {
+  console.log(1);
+}, 0);
+
+console.log(2);
+```
+先打印2，后打印1。
+因为是setTimeout是异步的。
+正确的理解setTimeout的方式(注册事件)：
+有两个参数，第一个参数是函数，第二参数是时间值。
+调用setTimeout时，把函数参数，放到事件队列中。等主程序运行完，再调用。
+没啥不好理解的。就像我们给按钮绑定事件一样：
+```javascript
+btn.onclick = function() {
+  alert(1);
+};
+```
+这么写完，会弹出1吗。不会！！只是绑定事件而已！
+必须等我们去触发事件，比如去点击这个按钮，才会弹出1。
+setTimeout也是这样的！只是绑定事件，等主程序运行完毕后，再去调用。
+setTimeout的时间值是怎么回事呢？
+比如：
+```javascript
+setTimeout(fn, 2000)
+```
+我们可以理解为2000之后，再放入事件队列中，如果此时队列为空，那么就直接调用fn。如果前面还有其他的事件，那就等待。
+因此setTimeout是一个约会从来都不准时的童鞋。
+继续看：
+```javascript
+setTimeout(function() {
+  console.log(i);
+}, 0);
+var i = 1;
+```
+程序会不会报错？
+不会！而且还会准确得打印1。
+为什么？
+因为真正去执行console.log(i)这句代码时，var i = 1已经执行完毕了！
+所以我们进行dom操作。可以先绑定事件，然后再去写其他逻辑。
+```javascript
+window.onload = function() {
+  fn();
+}
+var fn = function() {
+  alert('hello')
+};
+```
+这么写，完全是可以的。因为异步！
+
+es5中是没有块级作用域的
+```javascript
+for (var i = 0; i < 3; i++) {}
+console.log(i);
+```
+也就说i可以在for循环体外访问到。所以是没有块级作用域。
+但此问题在es6里终结了，因为es6，发明了let。
+
+这回我们再来看看原题。
+原题使用了for循环。循环的本质是干嘛的？
+是为了方便我们程序员，少写重复代码。
+让我们倒退50年，原题等价于：
+```javascript
+var i = 0;
+setTimeout(function() {
+	console.log(i);
+}, 0);
+console.log(i);
+i++;
+setTimeout(function() {
+	console.log(i);
+}, 0);
+console.log(i);
+i++;
+setTimeout(function() {
+	console.log(i);
+}, 0);
+console.log(i);
+i++;
+```
+因为setTimeout是注册事件。根据前面的讨论，可以都放在后面。
+原题又等价于如下的写法：
+```javascript
+var i = 0;
+console.log(i);
+i++;
+console.log(i);
+i++;
+console.log(i);
+i++;
+setTimeout(function() {
+	console.log(i);
+}, 0);
+setTimeout(function() {
+	console.log(i);
+}, 0);
+setTimeout(function() {
+	console.log(i);
+}, 0);
+```
+这回你明白了为啥结果是0 1 2 3 3 3了吧。
+
+如果原题也想setTimeout也弹出0，1，2的话，改成如下：
+```javascript
+for (var i = 0; i < 3; i++) {
+	setTimeout((function(i) {
+		return function() {
+			console.log(i);
+		};
+	})(i), 0);
+	console.log(i);
+}
+```

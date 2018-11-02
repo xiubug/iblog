@@ -2,9 +2,9 @@
 title: netlify 入门教程
 date: 2018-07-02 10:40:48
 tags:
-    - netlify
+  - note
 categories:
-    - 前端构建
+  - netlify
 ---
 
 [官网](https://www.netlify.com/)

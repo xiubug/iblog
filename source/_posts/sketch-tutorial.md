@@ -1,9 +1,9 @@
 ---
-title: Sketch 教程
+title: Sketch 使用汇总
 tags:
-  - sketch
+  - note
 categories:
-  - 设计教程
+  - sketch
 date: 2018-10-19 20:03:00
 ---
 

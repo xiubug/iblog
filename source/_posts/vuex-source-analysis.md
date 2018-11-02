@@ -1,9 +1,9 @@
 ---
 title: vuex 源码全方位剖析
 tags:
-  - vuex
+  - source
 categories:
-  - 源码教程
+  - vuex
 date: 2018-06-29 20:11:43
 ---
 

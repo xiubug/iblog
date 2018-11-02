@@ -2,9 +2,9 @@
 title: JAVA_HOME环境变量失效的解决办法
 date: 2018-07-09 13:00:01
 tags: 
-    - java
+    - JAVA_HOME
 categories:
-    - java笔记
+    - java
 ---
 
 今天团队中一个同事搭建java开发环境，遇到了一个很奇怪的问题。在cmd中输入`java -version`会报如下错误:

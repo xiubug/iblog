@@ -2,9 +2,9 @@
 title: 深聊import、require、export、module.exports
 date: 2018-07-05 20:55:39
 tags:
-    - module
+  - module
 categories:
-    - 前端教程
+  - javascript
 ---
 
 ## 前言

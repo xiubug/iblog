@@ -2,9 +2,9 @@
 title: redux 源码全方位剖析
 date: 2018-06-29 23:11:43
 tags:
-    - redux
+  - source
 categories:
-    - 源码教程
+  - redux
 ---
 
 `版本：v4.0.0`

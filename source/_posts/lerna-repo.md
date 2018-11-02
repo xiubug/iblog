@@ -2,9 +2,9 @@
 title: 使用lerna优雅地管理多个package
 date: 2018-07-21 20:55:06
 tags:
-    - lerna
+  - package
 categories:
-    - 前端架构
+  - lerna
 ---
 
 ## 背景

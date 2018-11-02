@@ -1,9 +1,9 @@
 ---
 title: vscode 使用汇总
 tags:
-  - vscode
+  - note
 categories:
-  - 工具笔记
+  - vscode
 date: 2018-05-05 22:44:10
 ---
 ## 基本使用

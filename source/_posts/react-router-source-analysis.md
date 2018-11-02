@@ -1,8 +1,8 @@
 ---
 title: react-router-source-analysis
 tags:
-  - react-router
+  - source
 categories:
-  - 源码教程
+  - react-router
 date: 2018-04-10 0:04:11
 ---

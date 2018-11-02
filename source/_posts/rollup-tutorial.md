@@ -2,9 +2,9 @@
 title: JavaScript模块打包工具Rollup——完全入门指南
 date: 2018-08-04 23:04:53
 tags:
-    - rollup
+  - note
 categories:
-    - 前端构建
+  - rollup
 ---
 
 `版本：v0.63.5。`

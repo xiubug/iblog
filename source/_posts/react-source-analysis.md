@@ -2,9 +2,9 @@
 title: React 源码全方位剖析
 date: 2018-08-12 22:10:52
 tags:
-    - react
+  - source
 categories:
-    - 源码教程
+  - react
 top: 100
 ---
 

@@ -2,9 +2,9 @@
 title: React 背后的工具体系
 date: 2018-08-30 20:10:11
 tags:
-    - react
+    - tools
 categories:
-    - 前端教程
+    - react
 uncr: true
 ---
 

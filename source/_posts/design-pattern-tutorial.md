@@ -2,11 +2,192 @@
 title: 设计模式
 date: 2018-04-19 20:23:16
 tags: 
-    - design
+  - note
 categories:
-    - 设计模式
+  - design
 ---
-设计模式（Design pattern）代表了最佳的实践，通常被有经验的面向对象的软件开发人员所采用。设计模式是软件开发人员在软件开发过程中面临的一般问题的解决方案。这些解决方案是众多软件开发人员经过相当长的一段时间的试验和错误总结出来的。
+
+设计模式（Design Pattern）是一套被反复使用、多数人知晓的、经过分类编目的、代码设计经验的总结。设计模式是一种思想，常见的生活例子如：盖房子的设计图纸，古代战争的孙子兵法。设计模式（Design pattern）代表了最佳的实践，通常被有经验的面向对象的软件开发人员所采用。设计模式是软件开发人员在软件开发过程中面临的一般问题的解决方案。这些解决方案是众多软件开发人员经过相当长的一段时间的试验和错误总结出来的。
+
+**设计模式的目的：**
+> 设计模式是优秀的使用案例，使用设计模式可提高代码的重用性、让代码更容易被他人理解、保证代码可靠性。
+
+java基本模式有23种：单例模式、抽象工厂模式、建造者模式、工厂模式、原型模式....，下面分别介绍一下设计模式：
+
+## 单例模式Singleton
+
+保证整个应用中某个实例有且只有一个。常见的生活例子有：古代皇帝有且只有一个、中国的一妻一夫制... 开发中，有些对象我们只需要一个，比如：配置文件、工具类、线程池、缓存、日志对象等，如果创造出多个实例，就会导致许多问题，比如占用过多资源，不一致的结果等。
+
+**应用场合：**有些对象只需要一个就足够了，如古代皇帝、老婆
+**作用：**保证整个应用程序中某个实例有且只有一个
+**类型：**饿汉模式、懒汉模式
+
+### 单例模式的饿汉式实现
+
+单例类：
+```javascript
+package com.sosout;
+/**
+* 饿汉模式
+*/
+public class Singleton {
+  // 1、将构造方法私有化，不允许外部直接创建对象
+  private Singleton() {
+  }
+
+  // 2、创建类的唯一实例，使用private static修饰
+  private static Singleton instance = new Singleton();
+
+  // 3、提供一个用于获取实例的方法，使用public static 修饰
+  public static Singleton getInstance() {
+    return instance;
+  }
+}
+```
+
+测试类：
+```javascript
+package com.sosout;
+public class Test {
+  public static void main(String[] args) {
+    Singleton s1 = Singleton.getInstance();
+    Singleton s2 = Singleton.getInstance();
+    if (s1 == s2) {
+      System.out.println("s1和s2是同一个实例");
+    } else {
+      System.out.println("s1和s2不是同一个实例");
+    }
+  }
+}
+```
+
+### 单例模式的懒汉式实现
+
+单例类：
+```javascript
+package com.sosout;
+/**
+* 懒汉模式
+*/
+public class Singleton2 {
+  // 1、将构造方法私有化，不允许外部直接创建对象
+  private Singleton2() {
+  }
+
+  // 2、创建类的唯一实例，使用private static修饰
+  private static Singleton2 instance;
+
+  // 3、提供一个用于获取实例的方法，使用public static 修饰
+  public static Singleton2 getInstance() {
+    if (instance == null) {
+      instance = new Singleton2();
+    }
+    return instance;
+  }
+}
+```
+
+测试类：
+```javascript
+package com.sosout;
+public class Test {
+  public static void main(String[] args) {
+    // 饿汉模式
+    Singleton s1 = Singleton.getInstance();
+    Singleton s2 = Singleton.getInstance();
+    if (s1 == s2) {
+      System.out.println("s1和s2是同一个实例");
+    } else {
+      System.out.println("s1和s2不是同一个实例");
+    }
+
+    // 懒汉模式
+    Singleton2 s3 = Singleton2.getInstance();
+    Singleton2 s4 = Singleton2.getInstance();
+    if (s3 == s4) {
+      System.out.println("s3和s4是同一个实例");
+    } else {
+      System.out.println("s3和s4不是同一个实例");
+    }
+  }
+}
+```
+
+### 饿汉模式和懒汉模式区别
+
+饿汉模式的特点是加载类时比较慢，但运行时获取对象的速度比较快，线程安全的，懒汉模式的特点是加载类时比较快，但运行时获取对象的速度比较慢，线程不安全的。
+
+**在JavaScript里，单例作为一个命名空间提供者，从全局命名空间里提供一个唯一的访问点来访问该对象。**
+
+**在JavaScript里，实现单例的方式有很多种，其中最简单的一个方式是使用对象字面量的方法，其字面量里可以包含大量的属性和方法：**
+```javascript
+var mySingleton = {
+  property1: "something",
+  property2: "something else",
+  method1: function () {
+    console.log('hello world');
+  }
+};
+```
+
+**如果以后要扩展该对象，你可以添加自己的私有成员和方法，然后使用闭包在其内部封装这些变量和函数声明。只暴露你想暴露的public成员和方法，样例代码如下：**
+```javascript
+var mySingleton = function () {
+
+  /* 这里声明私有变量和方法 */
+  var privateVariable = 'something private';
+  function showPrivate() {
+    console.log(privateVariable);
+  }
+
+  /* 公有变量和方法（可以访问私有变量和方法） */
+  return {
+    publicMethod: function () {
+      showPrivate();
+    },
+    publicVar: 'the public can see this!'
+  };
+};
+
+var single = mySingleton();
+single.publicMethod();  // 输出 'something private'
+console.log(single.publicVar); // 输出 'the public can see this!'
+```
+**上面的代码很不错了，但如果我们想做到只有在使用的时候才初始化，那该如何做呢？为了节约资源的目的，我们可以另外一个构造函数里来初始化这些代码，如下：**
+```javascript
+var Singleton = (function () {
+    var instantiated;
+    function init() {
+        /*这里定义单例代码*/
+        return {
+            publicMethod: function () {
+                console.log('hello world');
+            },
+            publicProperty: 'test'
+        };
+    }
+
+    return {
+        getInstance: function () {
+            if (!instantiated) {
+                instantiated = init();
+            }
+            return instantiated;
+        }
+    };
+})();
+
+/*调用公有的方法来获取实例:*/
+Singleton.getInstance().publicMethod();
+```
+
+## 工厂模式
+
+### 什么是工厂模式？
+
+实例化对象，用工厂方法代替new操作。
+工厂模式包括工厂方法模式和抽象工厂模式。
+抽象工厂模式是工厂方法模式的扩展。
 
 ## 策略模式
 
@@ -25,13 +206,13 @@ categories:
 ``` js
 var calculateBouns = function(salary,level) {
   if(level === 'A') {
-      return salary * 4;
+    return salary * 4;
   }
   if(level === 'B') {
-      return salary * 3;
+    return salary * 3;
   }
   if(level === 'C') {
-      return salary * 2;
+    return salary * 2;
   }
 };
 // 调用如下：
