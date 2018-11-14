@@ -15,7 +15,7 @@ categories:
 
 #### 项目地址
 
-[iboy](https://github.com/Zilean/iboy)
+[iboy](https://github.com/sosout/iboy)
 
 ## 前端
 
