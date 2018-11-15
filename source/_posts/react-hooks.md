@@ -10,7 +10,7 @@ date: 2018-11-14 22:08:41
 ## 前言
 不得不说 React 等优秀框架的出现为前端开发带来了极大的便利，但是在`React v16.7`提出`Hooks`之前我们依旧不得不面对一些很恶心的问题：
 
-### 组件复用造成嵌套黑洞（Wrapper Hell）
+### 组件逻辑复用麻烦且很有可能造成嵌套黑洞（Wrapper Hell）
 我们都知道react的核心思想是：将一个页面拆成一堆独立的，可复用的组件，并且用自上而下的单向数据流的形式将这些组件串联起来，但如果我们在大型项目中用react，我们便会发现项目中很多react组件冗长且难以复用，尤其是那些写成class的组件，它们本身包含了状态（state），所以复用这类组件就变得很麻烦。在 hooks 之前官方推荐的解决方式：[渲染属性（Render Props）](https://reactjs.org/docs/render-props.html)和[高阶组件（Higher-Order Components）](https://reactjs.org/docs/higher-order-components.html)，我们现在简单看一下这两种模式：
 
 #### 渲染属性（Render Props）
