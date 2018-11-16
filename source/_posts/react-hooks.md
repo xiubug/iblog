@@ -92,19 +92,19 @@ const UserPage = props => (
 
 export default withUser(UserPage);
 ```
-以上这两种模式看上去都挺不错的，有许多库(比如React Router, React Motion)都使用了这两种模式。但我们仔细看这两种模式，会发现它们会增加我们代码的层级关系。最直观的体现，打开devtool看看我们的组件层级嵌套是不是很夸张吧。如果我们采用 hooks 方式，把各种想要的功能写成一个一个可复用的自定义hook，当我们的组件想用什么功能时，直接在组件里调用这个hook即可，这样就简洁了许多，也没有多余的层级嵌套。
+以上这两种模式看上去都挺不错的，有许多库(比如React Router, React Motion)都有使用这些模式。但我们仔细看这两种模式，会发现它们会增加我们代码的层级关系。最直观的体现，打开devtool看看我们的组件层级嵌套是不是很夸张吧。如果我们采用 hooks 方式，把各种想要的功能写成一个一个可复用的自定义hook，当我们的组件想用什么功能时，直接在组件里调用这个hook即可，这样就简洁了许多，也没有多余的层级嵌套。
 
 ### 组件生命周期混乱
-由于React生命周期的存在，我们常常将一些逻辑强相关的代码分散地放置在组件的不同位置，造成我们的组件中出现了许多零散的、重复的代码，比如我们在 componentDidMount 中绑定事件、添加定时器，然后再 componentWillUnmount 中移除他们；又或者频繁地在 componentDidUpdate 中比较变化前和变化后的state来决定是否执行某些逻辑。
+由于React生命周期的存在，我们常常将一些逻辑强相关的代码分散地放置在组件的不同位置，造成我们的组件中出现了许多零散的、重复的代码，比如我们在 componentDidMount 中绑定事件、添加定时器，然后在 componentWillUnmount 中移除他们；又或者频繁地在 componentDidUpdate 中比较变化前和变化后的state来决定是否执行某些逻辑。
 
 ### 无状态组件（Function）和有状态组件（Class）选择问题
-回想我们在刚开始学习React的时候常常会迷惑于Functional Component(那个时候我们叫Stateless Component)和Class Component，两者得到的结果虽然大致是一致的，但是书写方式却迥然不同。有些组件可能最开始的时候使用Functional，后来发现需要加入生命周期和state的支持又不得不大费周折地改成Class。这样不清不楚的定位对许多初学者来说，无疑造成了很大的困扰。更有些开发者便无脑的都使用 Class Component。
+回想我们在刚开始学习React的时候常常会该使用Functional Component(那个时候我们叫Stateless Component)还是有状态组件（Class Component），虽然两者得到的结果大致相同，但是书写方式却迥然不同。有些组件可能最开始的时候使用Functional，后来发现需要加入生命周期和state的支持又不得不大费周折地改成Class。这样不清不楚的定位对许多初学者来说，无疑造成了很大的困扰。更有些开发者便无脑的都使用 Class Component。
 
 ### Class Component 的 this 指向问题
-我们用class来创建react组件时，还有一件很麻烦的事情，就是this的指向问题。为了保证this的指向正确，我们要经常写这样的代码：`this.handleClick = this.handleClick.bind(this)`，或者是这样的代码：`<button onClick={() => this.handleClick(e)}>`。一旦我们不小心忘了绑定this，各种bug就随之而来，很麻烦。
+我们用class创建react组件时，还有一件很麻烦的事情，就是this的指向问题。为了保证this的指向正确，我们要经常写这样的代码：`this.handleClick = this.handleClick.bind(this)`，或者是这样的代码：`<button onClick={() => this.handleClick(e)}>`。一旦我们不小心忘了绑定this，各种bug就随之而来，很麻烦。
 
 ### Class Component 无法 prepack 优化
-在 class里，类的属性即便内部没用到，对外部还是可访问的，所以类的属性在Uglify的时候是不会被编译的，同时如果一个类的方法没有被使用，编译器也无法将它识别出来并精简掉。
+在 class 里，类的属性即便内部没用到，对外部还是可访问的，所以类的属性在Uglify的时候是不会被编译的，同时如果一个类的方法没有被使用，编译器也无法将它识别出来并精简掉。
 
 在这样的背景下，Hooks便横空出世了！
 
@@ -167,7 +167,7 @@ import { useState } from 'react';
 function Example() {
   const [count, setCount] = useState(0);
 ```
-useState是react自带的一个hook函数，它的作用就是用来声明状态变量。useState这个函数接收的参数是我们的状态初始值（initial state），它返回了一个数组，这个数组的第`[0]`项是当前当前的状态值，第`[1]`项是可以改变状态值的方法函数，所以我们做的事情其实就是：声明了一个状态变量count，把它的初始值设为0，同时提供了一个可以更改count的函数setCount。上面这种表达形式，是借用了[es6的数组解构（array destructuring）](http://es6.ruanyifeng.com/#docs/destructuring#%E6%95%B0%E7%BB%84%E7%9A%84%E8%A7%A3%E6%9E%84%E8%B5%8B%E5%80%BC)，它可以让我们的代码看起来更简洁。实际上数组解构是一件开销很大的事情，用下面这种写法，或者改用对象解构，性能会有很大的提升。如果不用数组解构的话，可以写成下面这样：
+useState是react自带的一个hook函数，它的作用就是用来声明状态变量。useState这个函数接收的参数是我们的状态初始值（initial state），它返回了一个数组，这个数组的第`[0]`项是当前的状态值，第`[1]`项是可以改变状态值的函数，所以其实useState做的事情就是：声明了一个状态变量count，把它的初始值设为0，同时提供了一个可以更改count的函数setCount。上面这种表达形式，是借用了[es6的数组解构（array destructuring）](http://es6.ruanyifeng.com/#docs/destructuring#%E6%95%B0%E7%BB%84%E7%9A%84%E8%A7%A3%E6%9E%84%E8%B5%8B%E5%80%BC)，让我们的代码看起来更简洁。实际上数组解构是一件开销很大的事情，用下面这种写法，或者改用对象解构，性能会有很大的提升。如果不用数组解构的话，也可以写成下面这样：
 ``` js
 let _useState = useState(0);
 let count = _useState[0];
@@ -186,10 +186,10 @@ let setCount = _useState[1];
   Click me
 </button>
 ```
-当用户点击按钮时，我们调用setCount函数，这个函数接收的参数是修改过的新状态值。接下来的事情就交给react了，react将会重新渲染我们的Example组件，并且使用的是更新后的新的状态，即count=1。这里我们要停下来思考一下，Example本质上也是一个普通的函数，为什么它可以记住之前的状态？
+当用户点击按钮时，我们调用setCount函数，这个函数接收的参数是修改过的新状态值。接下来的事情就交给react了，react将会重新渲染我们的Example组件，并且使用的是更新后的新状态，即count=1。这里我们要停下来思考一下，Example本质上也是一个普通的函数，为什么它可以记住之前的状态？
 
-#### 一个至关重要的问题
-这里我们就发现了问题，通常来说我们在一个函数中声明的变量，当函数运行完成后，这个变量也就销毁了（这里我们先不考虑闭包等情况），比如考虑下面的例子：
+#### React 帮忙记住之前的状态
+通常来说我们在一个函数中声明的变量，当函数运行完成后，这个变量也就销毁了（这里我们先不考虑闭包等情况），比如考虑下面的例子：
 ``` js
 function add(n) {
     const result = 0;
@@ -201,7 +201,7 @@ add(1); //1
 ```
 不管我们反复调用add函数多少次，结果都是1。因为每一次我们调用add时，result变量都是从初始值0开始的。那为什么上面的Example函数每次执行的时候，都是拿的上一次执行完的状态值作为初始值？答案是：是react帮我们记住的。至于react是用什么机制记住的，我们可以再思考一下。
 
-#### 假如一个组件有多个状态值怎么办？
+#### React 记住状态的关键点
 首先，useState是可以多次调用的，所以我们完全可以这样写：
 ``` js
 function ExampleWithManyStates() {
@@ -215,9 +215,9 @@ function ExampleWithManyStates() {
 
 其实我们看hook的“形态”，有点类似之前被官方否定掉的Mixins这种方案，都是提供一种“插拔式的功能注入”的能力。而mixins之所以被否定，是因为Mixins机制是让多个Mixins共享一个对象的数据空间，这样就很难确保不同Mixins依赖的状态不发生冲突。
 
-而现在我们的hook，一方面它是直接用在function当中，而不是class；另一方面每一个hook都是相互独立的，不同组件调用同一个hook也能保证各自状态的独立性。这就是两者的本质区别了。
+而现在我们的hook，一方面它是直接用在function当中，而不是class；另一方面每一个hook都是相互独立的，不同组件调用同一个hook也能保证各自状态的独立性，这就是两者的本质区别。
 
-#### react是怎么保证多个useState的相互独立的？
+#### react是根据useState出现的顺序记住状态
 还是看上面给出的ExampleWithManyStates例子，我们调用了三次useState，每次我们传的参数只是一个值（如42，‘banana’），我们根本没有告诉react这些值对应的key是哪个，那react是怎么保证这三个useState找到它对应的state呢？
 
 答案是，react是根据useState出现的顺序来定的。我们具体来看一下：
@@ -261,6 +261,46 @@ useState([{ text: 'Learn Hooks' }]); //读取到的却是状态变量fruit的值
 
 ### Effect Hook: React.useEffect
 **useEffect: (() => {do sth...; return () => null}, []) => null**
+因为通过useEffect，我们可以完成对Class Component所有关键生命周期的访问。 我们详细来看一下：
+
+首先 useEffect 方法接收两个参数：
+* 第一个参数是一个函数
+这个函数会在每次组件重新update后被调用（我们也可以理解为每次render之后会调用一遍这个方法）。只使用这个方法的作用和 componentDidUpdate 差不多，比如要实现输入和document.title的双向绑定：
+``` js
+import React, { useState, useEffect } from 'react'
+
+export default function Example() {
+  const [value, setValue] = useState('')
+  useEffect(() => {
+    document.title = value
+  })
+
+  return <input value={value} onChange={e => {setValue(e.target.value)}} />
+}
+```
+* 这个函数的返回值也是一个函数
+回想一下，在使用class组件时， componentDidMount 其实是一类特殊的 componentDidUpdate —— 前者只会在第一次update时调用。所以在functional组件中，我们也可以使用useEffect来模拟 componentDidUpdate，只要区分函数的调用时机就可以。
+
+不过在useEffect里不是这样做的。useEffect的做法更简单粗暴一些：在state更新时调用，在下一次render之前清理。useEffect方法接收一个函数作为返回值，返回的函数会在下一次render之前被调用。 (总觉得这样会不会太粗暴了一点，因为每次重新render都会绑定一次事件。
+``` js
+import React, { useState, useEffect } from 'react'
+
+export default function Example() {
+  const handleClick = () => {
+      // do something
+  }
+  useEffect(() => {
+    document.querySelector('#example).addEventListener('click', handleClick)
+    return () => {
+      document.querySelector('#example).removeEventListener('click', handleClick)  
+    }
+  })
+  return <div id="example">Lorem</div>
+}
+```
+* 第三个知识点是这个函数的第二个参数是一个数组
+这个数组里的值可以等同于我们在写 componentDidUpdate 里的条件判断。只有当数组中包含的值变化的时候才会触发当前的useEffect。
+
 我们在上一节的例子中增加一个新功能：
 ``` js
 import { useState, useEffect } from 'react';
@@ -284,7 +324,7 @@ function Example() {
   );
 }
 ```
-我们对比着看一下，如果没有hooks，我们会怎么写？
+我们对比看一下，如果没有hooks，我们会怎么写？
 ```js
 class Example extends React.Component {
   constructor(props) {
@@ -332,7 +372,7 @@ function Example() {
 
 这里要注意几点：
 
-第一，react首次渲染和之后的每次渲染都会调用一遍传给useEffect的函数。而之前我们要用两个声明周期函数来分别表示首次渲染（componentDidMount），和之后的更新导致的重新渲染（componentDidUpdate）。
+第一，react首次渲染和之后的每次渲染都会调用一遍传给useEffect的函数。而之前我们要用两个声明周期函数来分别表示首次渲染（componentDidMount）和之后的更新导致的重新渲染（componentDidUpdate）。
 
 第二，useEffect中定义的副作用函数的执行不会阻碍浏览器更新视图，也就是说这些函数是异步执行的，而之前的componentDidMount或componentDidUpdate中的代码则是同步执行的。这种安排对大多数副作用说都是合理的，但有的情况除外，比如我们有时候需要先根据DOM计算出某个元素的尺寸再重新渲染，这时候我们希望这次重新渲染是同步发生的，也就是说它会在浏览器真的去绘制这个页面前发生。
 
@@ -479,45 +519,4 @@ function FriendListItem(props) {
   );
 }
 ```
-简直Fabulous!
-
-可以说，这个方法是这次更新当中， 最难理解的一个方法。同时也是最精妙的一个。 因为通过这个方法，我们可以完成对Class Component所有关键生命周期的访问。 我们详细来看一下：
-
-首先 useEffect 方法接收两个参数：
-* 第一个参数是一个函数
-这个函数会在每次组件重新update后被调用（我们也可以理解为每次render之后会调用一遍这个方法）。只使用这个方法的作用和 componentDidUpdate 差不多，比如要实现输入和document.title的双向绑定：
-``` js
-import React, { useState, useEffect } from 'react'
-
-export default function Example() {
-  const [value, setValue] = useState('')
-  useEffect(() => {
-    document.title = value
-  })
-
-  return <input value={value} onChange={e => {setValue(e.target.value)}} />
-}
-```
-* 这个函数的返回值也是一个函数
-回想一下，在使用class组件时， componentDidMount 其实是一类特殊的 componentDidUpdate —— 前者只会在第一次update时调用。所以在functional组件中，我们也可以使用useEffect来模拟 componentDidUpdate，只要区分函数的调用时机就可以。
-
-不过在useEffect里不是这样做的。useEffect的做法更简单粗暴一些：在state更新时调用，在下一次render之前清理。useEffect方法接收一个函数作为返回值，返回的函数会在下一次render之前被调用。 (总觉得这样会不会太粗暴了一点，因为每次重新render都会绑定一次事件。
-``` js
-import React, { useState, useEffect } from 'react'
-
-export default function Example() {
-  const handleClick = () => {
-      // do something
-  }
-  useEffect(() => {
-    document.querySelector('#example).addEventListener('click', handleClick)
-    return () => {
-      document.querySelector('#example).removeEventListener('click', handleClick)  
-    }
-  })
-  return <div id="example">Lorem</div>
-}
-```
-* 第三个知识点是这个函数的第二个参数是一个数组
-这个数组里的值可以等同于我们在写 componentDidUpdate 里的条件判断。只有当数组中包含的值变化的时候才会触发当前的useEffect。
-
+简直Fabulous！
