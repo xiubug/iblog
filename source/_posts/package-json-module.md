@@ -1,5 +1,5 @@
 ---
-title: package.json 文件中的 module 字段
+title: package.json详解
 date: 2018-08-08 23:47:07
 tags:
   - package.json
@@ -7,7 +7,12 @@ categories:
   - nodejs
 ---
 
-通常基于 NPM 托管的项目都会有一个 package.json 文件，它是项目的描述文件，它的内容是一个标准的 JSON 对象。相信大家对 package.json 常用配置肯定熟悉的不能再熟悉了，例如项目名称（name）、项目版本号（version）、项目描述 （description）、npm 命令（scripts）等等，而我们今天主要聊聊`pkg.module`字段的功能以及使用场景。
+通常基于 NPM 托管的项目都会有一个 package.json 文件，它是项目的描述文件，它的内容是一个标准的 JSON 对象。相信大家对 package.json 常用配置肯定熟悉的不能再熟悉了，例如项目名称（name）、项目版本号（version）、项目描述 （description）、npm 命令（scripts）等等，而我们今天聊聊`package.json`常用字段的功能以及使用场景。
+
+### pck.main
+main字段指定了模块的入口程序文件。就是说，如果你的模块名叫"foo"，用户安装了它，并且调用了 require("foo")，则这个main字段指定的模块的导出对象会被返回。
+这应该是一个相对于包根目录的模块标识。
+对于大部分模块来说，main字段除了指定一个主入口文件以外没什么其他用处了。
 
 ### pck.module
 
@@ -28,3 +33,27 @@ categories:
 webpack 从版本 2 开始也可以识别 pkg.module 字段。打包时，如果存在 module 字段，会优先使用，如果没找到对应的文件，则使用 main 字段，并按照 CommonJS 规范打包。所以目前主流的打包工具（webpack, rollup）都是支持 pkg.module 的，鉴于其优点，module 字段很有可能加入 package.json 的规范之中。另外，越来越多的 npm 包已经同时支持两种模块，使用者可以根据情况自行选择，并且实现也比较简单，只是模块导出的方式。
 
 注意：虽然打包工具支持了 ES Module，但是并不意味着其他的 es6 代码可以正常使用，因为使用者并不会对我们的 npm 包做编译处理，比如 webpack rules 中 exclude: /node_modules/，所以如果不是事先约定好后编译或者没有兼容性的需求，我们仍需要用 babel 处理，从而产出兼容性更好的 npm 包。
+
+### pck.files
+files字段是一个被项目包含的文件名数组，如果你在里面放一个文件夹名，那么这个文件夹中的所有文件都会被包含进项目中(除非是那些在其他规则中被忽略的文件)。
+你还可以在包的根目录或子目录下提供一个".npmignore"文件来忽略项目包含文件，即使这些文件被包含在files字段中。.npmignore文件和.gitignore的功能很像。
+某些文件总是被包含的，不论是否在规则中指定了它们：
+```
+package.json
+README (and its variants)
+CHANGELOG (and its variants)
+LICENSE / LICENCE
+```
+相反地，一些文件总是被忽略：
+```
+.git
+CVS
+.svn
+.hg
+.lock-wscript
+.wafpickle-N
+*.swp
+.DS_Store
+._*
+npm-debug.log
+```
