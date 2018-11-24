@@ -1,5 +1,5 @@
 ---
-title: git 开发汇总
+title: git 教程
 tags:
   - note
 categories:
@@ -17,3 +17,16 @@ Git会忽略空的文件夹。如果你想版本控制包括空文件夹，根�
 
 在项目根目录（如/StudioProjects/demo/Leave）下，找到.git/.MERGE_MSG.swp这个文件删除即可。 
 注：mac 删除命令rm -rf .MERGE_MSG.swp
+
+### pre-commit/hook: No such file or directory
+提交时发生如下错误：
+```js
+.git/hooks/pre-commit: line 2: ./node_modules/pre-commit/hook: No such file or directory
+```
+**解决办法：**
+方法一：
+进入`.git/hooks`目录，并删除`pre-commit`文件。
+
+方法二：
+在命令上加上`--no-verify`。
+
