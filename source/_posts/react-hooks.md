@@ -98,7 +98,7 @@ export default withUser(UserPage);
 由于React生命周期的存在，我们常常将一些逻辑强相关的代码分散地放置在组件的不同位置，造成我们的组件中出现了许多零散的、重复的代码，比如我们在 componentDidMount 中绑定事件、添加定时器，然后在 componentWillUnmount 中移除他们；又或者频繁地在 componentDidUpdate 中比较变化前和变化后的state来决定是否执行某些逻辑。
 
 ### 无状态组件（Function）和有状态组件（Class）选择问题
-回想我们在刚开始学习React的时候常常会该使用Functional Component(那个时候我们叫Stateless Component)还是有状态组件（Class Component），虽然两者得到的结果大致相同，但是书写方式却迥然不同。有些组件可能最开始的时候使用Functional，后来发现需要加入生命周期和state的支持又不得不大费周折地改成Class。这样不清不楚的定位对许多初学者来说，无疑造成了很大的困扰。更有些开发者便无脑的都使用 Class Component。
+回想我们在刚开始学习React的时候常常会疑惑该使用Functional Component(那个时候我们叫Stateless Component)还是有状态组件（Class Component），虽然两者得到的结果大致相同，但是书写方式却迥然不同。有些组件可能最开始的时候使用Functional，后来发现需要加入生命周期和state的支持又不得不大费周折地改成Class。这样不清不楚的定位对许多初学者来说，无疑造成了很大的困扰。更有些开发者便无脑的都使用 Class Component。
 
 ### Class Component 的 this 指向问题
 我们用class创建react组件时，还有一件很麻烦的事情，就是this的指向问题。为了保证this的指向正确，我们要经常写这样的代码：`this.handleClick = this.handleClick.bind(this)`，或者是这样的代码：`<button onClick={() => this.handleClick(e)}>`。一旦我们不小心忘了绑定this，各种bug就随之而来，很麻烦。
