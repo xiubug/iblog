@@ -57,104 +57,31 @@ npm install --save-dev tslint typescript tslint-config-alloy
 | [no-magic-numbers](https://palantir.github.io/tslint/rules/no-magic-numbers/)     | **禁止**使用魔法数字，仅允许使用一部分白名单中的数字 |
 | [no-namespace](https://palantir.github.io/tslint/rules/no-any/)     | **禁止**使用`namespace`来定义命名空间 |
 | [no-non-null-assertion](https://palantir.github.io/tslint/rules/no-non-null-assertion/)     | **禁止**使用 non-null 断言（感叹号） |
+| [no-parameter-reassignment](https://palantir.github.io/tslint/rules/no-parameter-reassignment/)     | **禁止**对函数的参数重新赋值 |
+| [no-reference](https://palantir.github.io/tslint/rules/no-reference/)     | **禁止**使用三斜线引入模块`/// <reference path="foo" />` |
+| [no-unnecessary-type-assertion](https://palantir.github.io/tslint/rules/no-unnecessary-type-assertion/)     | **禁止**无用的类型断言 |
+| [no-var-requires](https://palantir.github.io/tslint/rules/no-unnecessary-type-assertion/)     | **禁止**使用`require`来引入模块 |
+| [only-arrow-functions](https://palantir.github.io/tslint/rules/only-arrow-functions/)     | **必须**使用箭头函数，除非是单独的函数声明或是命名函数 |
+| [prefer-for-of](https://palantir.github.io/tslint/rules/prefer-for-of/)     | 使用`for`循环遍历数组时，如果`index`仅用于获取成员，则**必须**使用`for of`循环替代`for`循环 |
+| [promise-function-async](https://palantir.github.io/tslint/rules/promise-function-async/)     | `async`函数的返回值**必须**是`Promise` |
+| [typedef](https://palantir.github.io/tslint/rules/typedef/)     | 变量、函数返回值、函数参数等**必须**要有类型定义 |
+| [typedef-whitespace](https://palantir.github.io/tslint/rules/typedef-whitespace/)     | 类型定义的冒号前面**必须**没有空格，后面**必须**有一个空格 |
+| [unified-signatures](https://palantir.github.io/tslint/rules/unified-signatures/)     | 函数重载时，若能通过联合类型将两个函数的类型声明合为一个，则使用联合类型而不是两个函数声明 |
 
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/no-parameter-reassignment/">no-parameter-reassignment</a></td>
-            <td><strong style="color:#db5757; font-weight:600;">禁止</strong>对函数的参数重新赋值</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/no-reference/">no-reference</a></td>
-            <td><strong style="color:#db5757; font-weight:600;">禁止</strong>使用三斜线引入模块 <code>/// &lt;reference path="foo" /&gt;</code></td>
-        </tr>
-        <tr>
-            <td>❌</td>
-            <td><a href="https://palantir.github.io/tslint/rules/no-unnecessary-type-assertion/">no-unnecessary-type-assertion</a></td>
-            <td><strong style="color:#db5757; font-weight:600;">禁止</strong>无用的类型断言</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/no-var-requires/">no-var-requires</a></td>
-            <td><strong style="color:#db5757; font-weight:600;">禁止</strong>使用 <code>require</code> 来引入模块</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/only-arrow-functions/">only-arrow-functions</a></td>
-            <td><strong style="color:#267fd9; font-weight:600;">必须</strong>使用箭头函数，除非是单独的函数声明或是命名函数</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/prefer-for-of/">prefer-for-of</a></td>
-            <td>使用 <code>for</code> 循环遍历数组时，如果 <code>index</code> 仅用于获取成员，则<strong style="color:#267fd9; font-weight:600;">必须</strong>使用 <code>for of</code> 循环替代 <code>for</code> 循环</td>
-        </tr>
-        <tr>
-            <td>❌</td>
-            <td><a href="https://palantir.github.io/tslint/rules/promise-function-async/">promise-function-async</a></td>
-            <td><code>async</code> 函数的返回值<strong style="color:#267fd9; font-weight:600;">必须</strong>是 <code>Promise</code></td>
-        </tr>
-        <tr>
-            <td>❌</td>
-            <td><a href="https://palantir.github.io/tslint/rules/typedef/">typedef</a></td>
-            <td>变量、函数返回值、函数参数等<strong style="color:#267fd9; font-weight:600;">必须</strong>要有类型定义</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/typedef-whitespace/">typedef-whitespace</a></td>
-            <td>类型定义的冒号前面<strong style="color:#267fd9; font-weight:600;">必须</strong>没有空格，后面<strong style="color:#267fd9; font-weight:600;">必须</strong>有一个空格</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/unified-signatures/">unified-signatures</a></td>
-            <td>函数重载时，若能通过联合类型将两个函数的类型声明合为一个，则使用联合类型而不是两个函数声明</td>
-        </tr>
-    </tbody>
-</table>
-
-
-### 功能性检查
+#### 功能性检查
 
 找出可能的错误，以及可能会产生 bug 的编码习惯。
+| 名称        | 描述 |
+| ------     | ------     | 
+| [await-promise](https://palantir.github.io/tslint/rules/await-promise/) |`await`**必须**接受`Promise`|
+| [ban](https://palantir.github.io/tslint/rules/ban/) |禁用指定的函数或全局方法|
+| [ban-comma-operator](https://palantir.github.io/tslint/rules/ban-comma-operator/) |**禁止**使用逗号操作符|
+| [curly](https://palantir.github.io/tslint/rules/curly/) |`if`后面**必须**有` {`，除非是单行`if`|
+| [forin](https://palantir.github.io/tslint/rules/forin/) |`for in`内部**必须**有`hasOwnProperty`|
+| [import-blacklist](https://palantir.github.io/tslint/rules/import-blacklist/) |禁用指定的模块|
+| [label-position](https://palantir.github.io/tslint/rules/label-position/) |只允许在`do`, `for`, `while` 或 `switch` 中使用 `label`|
 
-<table>
-    <thead>
-        <tr>
-            <th width="60">开关</th>
-            <th>名称</th>
-            <th>描述</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>❌</td>
-            <td><a href="https://palantir.github.io/tslint/rules/await-promise/">await-promise</a></td>
-            <td><code>await</code> <strong style="color:#267fd9; font-weight:600;">必须</strong>接受 <code>Promise</code></td>
-        </tr>
-        <tr>
-            <td>❌</td>
-            <td><a href="https://palantir.github.io/tslint/rules/ban/">ban</a></td>
-            <td>禁用指定的函数或全局方法</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/ban-comma-operator/">ban-comma-operator</a></td>
-            <td><strong style="color:#db5757; font-weight:600;">禁止</strong>使用逗号操作符</td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/curly/">curly</a></td>
-            <td><code>if</code> 后面<strong style="color:#267fd9; font-weight:600;">必须</strong>有 <code>{</code>，除非是单行 <code>if</code></td>
-        </tr>
-        <tr>
-            <td>✅</td>
-            <td><a href="https://palantir.github.io/tslint/rules/forin/">forin</a></td>
-            <td><code>for in</code> 内部<strong style="color:#267fd9; font-weight:600;">必须</strong>有 <code>hasOwnProperty</code></td>
-        </tr>
-        <tr>
-            <td>❌</td>
-            <td><a href="https://palantir.github.io/tslint/rules/import-blacklist/">import-blacklist</a></td>
-            <td>禁用指定的模块</td>
-        </tr>
+
         <tr>
             <td>❌</td>
             <td><a href="https://palantir.github.io/tslint/rules/label-position/">label-position</a></td>
