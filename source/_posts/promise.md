@@ -56,6 +56,10 @@ getData1()
 ### Promise 概念
 Promise 是异步编程的一种解决方案，比传统的解决方案——回调函数和事件——更合理和更强大。它由社区最早提出和实现，ES6 将其写进了语言标准，统一了用法，原生提供了Promise对象。所谓Promise，简单说就是一个容器，里面保存着某个未来才会结束的事件（通常是一个异步操作）的结果。从语法上说，Promise 是一个对象，从它可以获取异步操作的消息。从写法上说，Promise 就是一种用来写JavaScript编程中的异步代码的方式。Promise 提供统一的 API，各种异步操作都可以用同样的方法进行处理。
 
+### Promise 特点
+* 对象的状态不受外界影响。
+* 一旦状态改变，就不会再变，任何时候都可以得到这个结果。
+
 ### Promise 用法
 首先要认清最基本的用法。一般学习Promise看到的第一段代码是这样：
 ```js
@@ -108,8 +112,8 @@ fulfilled和rejected有可以说是已成功和已失败，这两种状态又归
 #### Promise API
 promise的内容分为构造函数、实例方法和静态方法：
 * 1个构造函数： new Promise
-* 2个实例方法：.then 和 .catch
-* 4个静态方法：Promise.all、Promise.race、Promise.resolve和Promise.reject
+* 2个实例方法：.then、.catch、finally
+* 4个静态方法：Promise.all、Promise.race、Promise.resolve、Promise.reject和Promise.try
 
 下面逐个讲下他们的作用：
 * new Promise能将一个异步过程转化成promise对象。先有了promise对象，然后才有promise编程方式。
