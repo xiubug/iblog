@@ -200,24 +200,11 @@ p3，p4 变红。
 
 ### 伪类选择器
 
-| 选择器      | 例子        | 例子描述                          | 版本 |
-| ------     | ------     | ------                        | ------ |
-| :link         | a:link   | 选择所有未被访问的链接。 | CSS1 |
-| :visited   | a:visited   | 选择所有已被访问的链接。 | CSS1 |
-| :active    | a:active    | 选择活动链接。       | CSS1 |
-| :hover    | a:hover    | 选择鼠标指针位于其上的链接。       | CSS1 |
-| :focus | input:focus    | 选择获得焦点的 input 元素。 | CSS2 |
+![img1.jpg](/images/css-selector/img1.jpg)
 
 ### 伪元素选择器
 
-| 选择器      | 例子        | 例子描述                          | 版本 |
-| ------     | ------     | ------                        | ------ |
-| :first-letter | p:first-letter    | 选择每个 p 元素的首字母。 | CSS1 |
-| :first-line | p:first-line    | 选择每个 p 元素的首行。 | CSS1 |
-| :first-child | p:first-child   | 选择属于父元素的第一个子元素的每个 p 元素。 | CSS2 |
-| :before | p:before    | 在每个 p 元素的内容之前插入内容。 | CSS2 |
-| :after | p:after    | 在每个 p 元素的内容之后插入内容。 | CSS2 |
-| :lang(language) | p:lang(it)   | 选择带有以 "it" 开头的 lang 属性值的每个 p 元素。 | CSS2 |
+![img2.jpg](/images/css-selector/img2.jpg)
 
 ### 补充内容
 
