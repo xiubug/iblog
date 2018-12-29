@@ -22,6 +22,71 @@ lerna到底是什么呢？lerna官网上是这样描述的。
 **二、**通过git 检测文件改动，自动发布。
 **三、**根据git 提交记录，自动生成CHANGELOG
 
+### 常用命令
+#### 全局安装lerna
+lerna 我们需要全局安装lerna工具。
+``` bash
+$ npm i -g lerna
+# 或
+$ yarn global add lerna
+```
+
+#### 为所有项目安装依赖，类似于npm/yarn i
+``` bash
+$ lerna bootstrap
+```
+
+#### 提交对项目的更新
+运行该命令会执行如下的步骤：
+1. 运行lerna updated来决定哪一个包需要被publish
+2. 如果有必要，将会更新lerna.json中的version
+3. 将所有更新过的的包中的package.json的version字段更新
+4. 将所有更新过的包中的依赖更新
+5. 为新版本创建一个git commit或tag
+6. 将包publish到npm上
+
+``` bash
+$ lerna publish # 用于发布更新
+$ lerna publish --skip-git # 不会创建git commit或tag
+$ lerna publish --skip-npm # 不会把包publish到npm上
+```
+
+#### 使用lerna 初始化项目
+``` bash
+$ lerna init # 固定模式(Fixed mode)默认为固定模式，packages下的所有包共用一个版本号(version)
+$ lerna init --independent # 独立模式(Independent mode)，每一个包有一个独立的版本号
+```
+
+#### 为packages文件夹下的package安装依赖
+``` bash
+$ lerna add <package>[@version] [--dev] # 命令签名
+$ lerna add babel # 该命令会在package-1和package-2下安装babel
+$ lerna add react --scope=package-1 # 该命令会在package-1下安装react
+$ lerna add package-2 --scope=package-1 # 该命令会在package-1下安装package-2
+```
+
+#### 对包是否发生过变更
+``` bash
+$ lerna updated
+# 或
+$ lerna diff
+```
+
+#### 显示packages下的各个package的version
+``` bash
+$ lerna ls
+```
+
+#### 清理node_modules
+``` bash
+$ lerna clean
+```
+
+#### 运行npm script，可以指定具体的package
+``` bash
+$ lerna run
+```
+
 ## 使用lerna的基本工作流
 ### 环境配置
 * Git 在一个lerna工程里，是通过git来进行代码管理的。所以你首先要确保本地有正确的git环境。 如果需要多人协作开发，请先创建正确的git中心仓库的链接。 因此需要你了解基本的git操作，在此不再赘述。
@@ -29,7 +94,12 @@ lerna到底是什么呢？lerna官网上是这样描述的。
 ``` bash
 $ npm config ls
 ```
-* lerna 我们需要全局安装lerna工具。
+* lerna 我们需要全局安装lerna工具
+``` bash
+$ npm i -g lerna
+# 或
+$ yarn global add lerna
+```
 
 ### 初始化一个lerna工程
 > 在这个例子中，我将在我本地d:/jobs 根目录下初始化一个lerna工程。
@@ -100,6 +170,88 @@ $ lerna publish
 到这里为止，就是一个最简单的lerna的工作流了。但是lerna还有更多的功能等待你去发掘。
 lerna有两种工作模式,Independent mode和Fixed/Locked mode，在这里介绍可能会对初学者造成困扰，但因为实在太重要了，还是有必要提一下的。
 lerna的默认模式是Fixed/Locked mode，在这种模式下，实际上lerna是把工程当作一个整体来对待。每次发布packges，都是全量发布，无论是否修改。但是在Independent mode下，lerna会配合Git，检查文件变动，只发布有改动的packge。
+
+## 使用lerna提升开发流程体验
+接下来，我们从一个demo出发，了解基于lerna的开发流程。
+
+### 项目初始化
+![img1.jpg](/images/lerna-repo/img1.jpg)
+
+我们需要维护一个UI组件库，其包含2个组件，分别为House（房子）和Window（窗户）组件，其中House组件依赖于Window组件。
+我们使用lerna初始化整个项目，并且在packages里新建了2个package，执行命令进行初始化：
+``` bash
+$ lerna init
+```
+初始化化后目录结构如下所示：
+``` js
+.
+├── lerna.json
+├── package.json
+└── packages
+    ├── house
+    │   ├── index.js
+    │   ├── node_modules
+    │   └── package.json
+    └── window
+        ├── index.js
+        ├── node_modules
+        └── package.json
+```
+
+### 增加依赖
+![img2.jpg](/images/lerna-repo/img2.jpg)
+
+接下来，我们来为组件增加些依赖，首先House组件不能只由Window构成，还需要添加一些外部依赖（在这里我们假定为lodash）。我们执行：
+``` bash
+$ lerna add lodash --scope=house
+```
+
+这句话会将lodash增添到House的dependencies属性里，这会儿你可以去看看package.json是不是发生变更了。
+
+我们还需要将Window添加到House的依赖里，执行：
+``` bash
+$ lerna add window --scope=house
+```
+
+就是这么简单，它会自动检测到window隶属于当前项目，直接采用symlink的方式关联过去。
+
+> symlink:符号链接，也就是平常所说的建立超链接，此时House的node_modules里的Window直接链接至项目里的Window组件，而不会再重新拉取一份，这个对本地开发是非常有用的。
+
+### 发布到npm
+![img3.jpg](/images/lerna-repo/img3.jpg)
+
+接下来我们只需要简单地执行lerna publish，确认升级的版本号，就可以批量将所有的package发布到远程。
+
+> 默认情况下会推送到系统目前npm对应的registry里，实际项目里可以根据配置leran.json切换所使用的npm客户端。
+
+### 更新模块
+![img4.jpg](/images/lerna-repo/img4.jpg)
+
+接下来，我们变更了Window组件，执行一下lerna updated，便可以得知有哪些组件发生了变更。
+``` js
+→ lerna updated
+lerna info version 2.9.1
+lerna info Checking for updated packages...
+lerna info Comparing with v1.0.9.
+lerna info Checking for prereleased packages...
+lerna info result
+- jx-house
+- jx-window
+```
+我们可以看到，虽然我们只变更了window组件，但是lerna能够帮助我们检查到所有依赖于它的组件，对于没有关联的组件，是不会出现在更新列表里的，这个对于相比之前人工维护版本依赖的更新，是非常稳健的。
+
+### 集中版本号或独立版本号
+截止目前，我们已经成功发布了2个package，现在再新增一个Tree组件，它和其他2个package保持独立，随后我们执行lerna publish，它会提示Tree组件的版本号将会从0.0.0升级至1.0.0，但是事实上Tree组件仅仅是刚创建的，这点不利于版本号的语义化，lerna已经考虑到了这一点，它包含2种版本号管理机制。
+
+* fixed模式下，模块发布新版本时，都会升级到leran.json里编写的version字段
+* independent模式下，模块发布新版本时，会逐个询问需要升级的版本号，基准版本为它自身的package.json，这样就避免了上述问题。
+
+如果需要各个组件维护自身的版本号，那么就使用independent模式，只需要去配置leran.json即可。
+
+### 总结
+![img4.jpg](/images/lerna-repo/img4.jpg)
+lerna不负责构建，测试等任务，它提出了一种集中管理package的目录模式，提供了一套自动化管理程序，让开发者不必再深耕到具体的组件里维护内容，在项目根目录就可以全局掌控，基于npm scripts，可以很好地完成组件构建，代码格式化等操作，并在最后一公里，用lerna变更package版本，将其上传至远端。
+
 ## lerna最佳实践
 为了能够使lerna发挥最大的作用，根据这段时间使用lerna 的经验，总结出一个最佳实践。下面是一些特性。
 * 采用Independent模式
