@@ -60,9 +60,21 @@ $ lerna init --independent # 独立模式(Independent mode)，每一个包有一
 #### 为packages文件夹下的package安装依赖
 ``` bash
 $ lerna add <package>[@version] [--dev] # 命令签名
-$ lerna add babel # 该命令会在package-1和package-2下安装babel
-$ lerna add react --scope=package-1 # 该命令会在package-1下安装react
-$ lerna add package-2 --scope=package-1 # 该命令会在package-1下安装package-2
+
+# 例如
+$ lerna add module-1 --scope=module-2 # 将 module-1 安装到 module-2
+$ lerna add module-1 --scope=module-2 --dev # 将 module-1 安装到 module-2 的 devDependencies 下
+$ lerna add module-1 # 将 module-1 安装到除 module-1 以外的所有模块
+$ lerna add babel-core # 将 babel-core 安装到所有模块
+```
+
+#### 卸载依赖
+``` bash
+$ lerna exec -- <command> [..args] # 在所有包中运行该命令
+
+# 例如
+$ lerna exec --scope=npm-list  yarn remove listr # 将 npm-list 包下的 listr 卸载
+$ lerna exec -- yarn remove listr # 将所有包下的 listr 卸载
 ```
 
 #### 对包是否发生过变更
