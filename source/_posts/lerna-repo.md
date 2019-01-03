@@ -87,6 +87,34 @@ $ lerna clean
 $ lerna run
 ```
 
+## lerna.json解析
+``` json
+{
+  "version": "1.1.3",
+  "npmClient": "npm",
+  "command": {
+    "publish": {
+      "ignoreChanges": [
+        "ignored-file",
+        "*.md"
+      ]
+    },
+    "bootstrap": {
+      "ignore": "component-*",
+      "npmClientArgs": ["--no-package-lock"]      
+    }
+  },
+  "packages": ["packages/*"]
+}
+```
+**version：**当前库的版本
+**npmClient：** 允许指定命令使用的client， 默认是 npm， 可以设置成 yarn
+**command.publish.ignoreChanges：**可以指定那些目录或者文件的变更不会被publish
+**command.bootstrap.ignore：**指定不受 bootstrap 命令影响的包
+**command.bootstrap.npmClientArgs：**指定默认传给 lerna bootstrap 命令的参数
+**command.bootstrap.scope：**指定那些包会受 lerna bootstrap 命令影响
+**packages：**指定包所在的目录
+
 ## 使用lerna的基本工作流
 ### 环境配置
 * Git 在一个lerna工程里，是通过git来进行代码管理的。所以你首先要确保本地有正确的git环境。 如果需要多人协作开发，请先创建正确的git中心仓库的链接。 因此需要你了解基本的git操作，在此不再赘述。
