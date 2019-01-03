@@ -94,10 +94,21 @@ $ lerna ls
 $ lerna clean
 ```
 
-#### 运行npm script，可以指定具体的package
+#### lerna run 
+
+运行npm script，可以指定具体的package。
 ``` bash
-$ lerna run
+$ lerna run <script> -- [..args] # 在所有包下运行指定
+
+# 例如
+$ lerna run test # 运行所有包的 test 命令
+$ lerna run build # 运行所有包的 build 命令
+$ lerna run --parallel watch # 观看所有包并在更改时发报，流式处理前缀输出
+
+$ lerna run --scope my-component test # 运行 my-component 模块下的 test
+
 ```
+[参考](https://github.com/lerna/lerna/tree/master/commands/run#readme)
 
 ## lerna.json解析
 ``` json
