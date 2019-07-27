@@ -2,10 +2,9 @@
 title: Vue 源码全方位剖析
 date: 2018-08-12 23:55:37
 tags:
-    - source
+  - source
 categories:
-    - vue
-top: 99
+  - vue
 ---
 
 `版本：v2.5.17-beta.0`
